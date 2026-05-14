@@ -1,0 +1,541 @@
+{
+  "info": {
+    "name": "FisioHomecare API",
+    "description": "API Collection untuk FisioHomecare Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000/v1" },
+    { "key": "token", "value": "" },
+    { "key": "therapist_token", "value": "" },
+    { "key": "patient_token", "value": "" },
+    { "key": "therapist_id", "value": "" },
+    { "key": "patient_id", "value": "" },
+    { "key": "schedule_id", "value": "" },
+    { "key": "order_id", "value": "" },
+    { "key": "service_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.token) {",
+                  "  pm.environment.set('token', res.data.token);",
+                  "  console.log('Admin token saved!');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@fisiohomecare.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login Therapist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.token) {",
+                  "  pm.environment.set('therapist_token', res.data.token);",
+                  "  console.log('Therapist token saved!');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"budi@fisiohomecare.com\",\n  \"password\": \"therapist123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login Patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.token) {",
+                  "  pm.environment.set('patient_token', res.data.token);",
+                  "  console.log('Patient token saved!');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"andi@gmail.com\",\n  \"password\": \"patient123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Register Patient Baru",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sari Dewi\",\n  \"email\": \"sari@gmail.com\",\n  \"password\": \"sari123\",\n  \"phone\": \"081234567899\",\n  \"role\": \"patient\",\n  \"address\": \"Jl. Sudirman No. 5, Jakarta\",\n  \"medical_history\": \"Pasca operasi lutut\",\n  \"emergency_contact\": \"081234567800\",\n  \"dob\": \"1995-03-20\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Register Therapist Baru",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dr. Rina Fisioterapis\",\n  \"email\": \"rina@fisiohomecare.com\",\n  \"password\": \"rina123\",\n  \"phone\": \"081234567895\",\n  \"role\": \"therapist\",\n  \"license_number\": \"STR-FIS-2024-002\",\n  \"specialization\": \"Neurologi\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Therapists",
+      "item": [
+        {
+          "name": "List All Therapists",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "  pm.environment.set('therapist_id', res.data[0].id);",
+                  "  console.log('therapist_id saved:', res.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/therapists",
+              "host": ["{{base_url}}"],
+              "path": ["therapists"]
+            }
+          }
+        },
+        {
+          "name": "Get Therapist Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/therapists/{{therapist_id}}", "host": ["{{base_url}}"], "path": ["therapists", "{{therapist_id}}"] }
+          }
+        },
+        {
+          "name": "Validate Therapist (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/therapists/{{therapist_id}}/validate", "host": ["{{base_url}}"], "path": ["therapists", "{{therapist_id}}", "validate"] }
+          }
+        },
+        {
+          "name": "Get Therapist Schedules",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "  pm.environment.set('schedule_id', res.data[0].id);",
+                  "  console.log('schedule_id saved:', res.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/therapists/{{therapist_id}}/schedules", "host": ["{{base_url}}"], "path": ["therapists", "{{therapist_id}}", "schedules"] }
+          }
+        },
+        {
+          "name": "Create Schedule (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-05-20\",\n  \"start_time\": \"13:00\",\n  \"end_time\": \"14:00\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/therapists/{{therapist_id}}/schedules", "host": ["{{base_url}}"], "path": ["therapists", "{{therapist_id}}", "schedules"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Services (Layanan)",
+      "item": [
+        {
+          "name": "List All Services",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.length > 0) {",
+                  "  pm.environment.set('service_id', res.data[0].id);",
+                  "  console.log('service_id saved:', res.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/services", "host": ["{{base_url}}"], "path": ["services"] }
+          }
+        },
+        {
+          "name": "Create Service (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fisioterapi Sport\",\n  \"description\": \"Terapi cedera olahraga\",\n  \"price\": 400000,\n  \"duration_minutes\": 60\n}"
+            },
+            "url": { "raw": "{{base_url}}/services", "host": ["{{base_url}}"], "path": ["services"] }
+          }
+        },
+        {
+          "name": "Update Service (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fisioterapi Sport Updated\",\n  \"price\": 450000\n}"
+            },
+            "url": { "raw": "{{base_url}}/services/{{service_id}}", "host": ["{{base_url}}"], "path": ["services", "{{service_id}}"] }
+          }
+        },
+        {
+          "name": "Delete Service (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/services/{{service_id}}", "host": ["{{base_url}}"], "path": ["services", "{{service_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order (Patient)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.data && res.data.id) {",
+                  "  pm.environment.set('order_id', res.data.id);",
+                  "  console.log('order_id saved:', res.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{patient_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"therapist_id\": \"{{therapist_id}}\",\n  \"schedule_id\": \"{{schedule_id}}\",\n  \"service_type\": \"Fisioterapi Pasca Operasi\",\n  \"address\": \"Jl. Merdeka No. 10, Jakarta\",\n  \"lat\": -6.2088,\n  \"lng\": 106.8456,\n  \"notes\": \"Lutut kanan masih bengkak\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/orders", "host": ["{{base_url}}"], "path": ["orders"] }
+          }
+        },
+        {
+          "name": "List My Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patient_token}}" }],
+            "url": { "raw": "{{base_url}}/orders", "host": ["{{base_url}}"], "path": ["orders"] }
+          }
+        },
+        {
+          "name": "Get Order Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patient_token}}" }],
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}"] }
+          }
+        },
+        {
+          "name": "Update Order Status (Therapist - Confirm)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{therapist_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"confirmed\"\n}" },
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}/status", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}", "status"] }
+          }
+        },
+        {
+          "name": "Update Order Status (Therapist - OTW)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{therapist_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"otw\"\n}" },
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}/status", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}", "status"] }
+          }
+        },
+        {
+          "name": "Update Order Status (Therapist - Ongoing)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{therapist_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"ongoing\"\n}" },
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}/status", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}", "status"] }
+          }
+        },
+        {
+          "name": "Update Order Status (Therapist - Done)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{therapist_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"done\"\n}" },
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}/status", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}", "status"] }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patient_token}}" }],
+            "url": { "raw": "{{base_url}}/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["orders", "{{order_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Initiate Payment (Patient)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{patient_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"amount\": 350000,\n  \"method\": \"transfer\",\n  \"proof_url\": \"/uploads/payments/bukti-transfer.jpg\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/payments/initiate", "host": ["{{base_url}}"], "path": ["payments", "initiate"] }
+          }
+        },
+        {
+          "name": "Confirm Payment (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"confirmed\"\n}" },
+            "url": { "raw": "{{base_url}}/payments/{{order_id}}/confirm", "host": ["{{base_url}}"], "path": ["payments", "{{order_id}}", "confirm"] }
+          }
+        },
+        {
+          "name": "Get Payment Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/payments/{{order_id}}", "host": ["{{base_url}}"], "path": ["payments", "{{order_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Therapy Records",
+      "item": [
+        {
+          "name": "Create Record (Therapist)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{therapist_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"chief_complaint\": \"Nyeri lutut kanan pasca operasi ACL\",\n  \"diagnosis\": \"Post-op ACL reconstruction, fase rehabilitasi minggu ke-4\",\n  \"actions_taken\": \"ROM exercise, strengthening quadriceps, cold therapy\",\n  \"session_number\": 1,\n  \"check_in_at\": \"2026-05-14T08:00:00Z\",\n  \"check_out_at\": \"2026-05-14T09:00:00Z\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/records", "host": ["{{base_url}}"], "path": ["records"] }
+          }
+        },
+        {
+          "name": "Get Record Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/records/{{order_id}}", "host": ["{{base_url}}"], "path": ["records", "{{order_id}}"] }
+          }
+        },
+        {
+          "name": "Get Patient Records",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/patients/{{patient_id}}/records", "host": ["{{base_url}}"], "path": ["patients", "{{patient_id}}", "records"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload",
+      "item": [
+        {
+          "name": "Upload Bukti Pembayaran",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patient_token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/upload/payment", "host": ["{{base_url}}"], "path": ["upload", "payment"] }
+          }
+        },
+        {
+          "name": "Upload Foto Kondisi Pasien",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{patient_token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/upload/photo", "host": ["{{base_url}}"], "path": ["upload", "photo"] }
+          }
+        },
+        {
+          "name": "Upload Dokumen Lisensi (Terapis)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{therapist_token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/upload/license", "host": ["{{base_url}}"], "path": ["upload", "license"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard (Admin)",
+      "item": [
+        {
+          "name": "Get Stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/dashboard/stats", "host": ["{{base_url}}"], "path": ["dashboard", "stats"] }
+          }
+        },
+        {
+          "name": "Get Dashboard Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/dashboard/orders", "host": ["{{base_url}}"], "path": ["dashboard", "orders"] }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+const { DataTypes } = require('sequelize');
+
+module.exports = (sequelize) => {
+  const TherapyRecord = sequelize.define('TherapyRecord', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    order_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      unique: true,
+      references: {
+        model: 'orders',
+        key: 'id',
+      },
+    },
+    therapist_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'therapists',
+        key: 'id',
+      },
+    },
+    patient_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'patients',
+        key: 'id',
+      },
+    },
+    chief_complaint: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    diagnosis: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    actions_taken: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    session_number: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      validate: {
+        min: 1,
+      },
+    },
+    check_in_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    check_out_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+  }, {
+    tableName: 'therapy_records',
+    timestamps: true,
+    underscored: true,
+    indexes: [
+      { unique: true, fields: ['order_id'] },
+      { fields: ['therapist_id'] },
+      { fields: ['patient_id'] },
+    ],
+  });
+
+  return TherapyRecord;
+};
