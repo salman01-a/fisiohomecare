@@ -120,16 +120,11 @@ export const orderAPI = {
 
 // Payments
 export const paymentAPI = {
-  initiate: (paymentData) => {
-    const formData = new FormData();
-    Object.entries(paymentData).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
-    return request('/payments/initiate', {
+  initiate: (paymentData) =>
+    request('/payments/initiate', {
       method: 'POST',
-      body: formData,
-    });
-  },
+      body: JSON.stringify(paymentData),
+    }),
   confirm: (orderId, status) =>
     request(`/payments/${orderId}/confirm`, {
       method: 'PATCH',

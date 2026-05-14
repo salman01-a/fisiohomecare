@@ -30,8 +30,8 @@ export default function TherapistDashboard() {
         const res = await orderAPI.getAll();
         setOrders(res.data || []);
       } else if (activeTab === 'schedules') {
-        if (user?.therapist_id || profile?.id) {
-          const tid = user?.therapist_id || profile?.id;
+        if (profile?.id) {
+          const tid = profile.id;
           const res = await therapistAPI.getSchedules(tid);
           setSchedules(res.data || []);
         }
@@ -44,8 +44,8 @@ export default function TherapistDashboard() {
     const loadProfile = async () => {
       try {
         const meRes = await import('../services/api').then(m => m.authAPI.getMe());
-        if (meRes.data?.therapist) {
-          setProfile(meRes.data.therapist);
+        if (meRes.data?.therapistProfile) {
+          setProfile(meRes.data.therapistProfile);
         }
       } catch (err) { console.error(err); }
     };
@@ -70,7 +70,7 @@ export default function TherapistDashboard() {
     try {
       await recordAPI.create({
         order_id: selectedOrder.id,
-        therapist_id: user?.therapist_id || profile?.id,
+        therapist_id: profile?.id,
         patient_id: selectedOrder.patient_id,
         chief_complaint: recordForm.chief_complaint,
         diagnosis: recordForm.diagnosis,
@@ -88,7 +88,7 @@ export default function TherapistDashboard() {
   const handleCreateSchedule = async (e) => {
     e.preventDefault();
     try {
-      const tid = user?.therapist_id || profile?.id;
+      const tid = profile?.id;
       await therapistAPI.createSchedule(tid, newSchedule);
       setNewSchedule({ date: '', start_time: '', end_time: '' });
       loadData();
@@ -98,7 +98,7 @@ export default function TherapistDashboard() {
   const handleDeleteSchedule = async (sid) => {
     if (!confirm('Hapus jadwal ini?')) return;
     try {
-      const tid = user?.therapist_id || profile?.id;
+      const tid = profile?.id;
       await therapistAPI.deleteSchedule(tid, sid);
       loadData();
     } catch (err) { alert(err.message); }

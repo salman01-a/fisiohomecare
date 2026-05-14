@@ -34,7 +34,7 @@ export default function RegisterTherapist() {
       const res = await authAPI.register(submitData);
       
       // Store token and redirect
-      localStorage.setItem('token', res.token);
+      localStorage.setItem('token', res.data.token);
       alert('Pendaftaran berhasil! Akun Anda sedang menunggu validasi admin.');
       
       // We force page reload to auth context kicks in and redirects
