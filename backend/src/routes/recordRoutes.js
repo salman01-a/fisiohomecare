@@ -7,7 +7,7 @@ const { createRecord, getRecordById, getPatientRecords } = require('../controlle
 router.use(authenticate);
 
 router.post('/', authorize('therapist'), requireValidatedTherapist, [
-  body('order_id').isUUID().withMessage('Valid order_id required'),
+  body('order_id').isInt().withMessage('Valid order_id required'),
 ], validate, createRecord);
 
 router.get('/:id', getRecordById);

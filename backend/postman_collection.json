@@ -314,7 +314,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"therapist_id\": \"{{therapist_id}}\",\n  \"schedule_id\": \"{{schedule_id}}\",\n  \"service_type\": \"Fisioterapi Pasca Operasi\",\n  \"address\": \"Jl. Merdeka No. 10, Jakarta\",\n  \"lat\": -6.2088,\n  \"lng\": 106.8456,\n  \"notes\": \"Lutut kanan masih bengkak\"\n}"
+              "raw": "{\n  \"therapist_id\": {{therapist_id}},\n  \"schedule_id\": {{schedule_id}},\n  \"service_type\": \"Fisioterapi Pasca Operasi\",\n  \"address\": \"Jl. Merdeka No. 10, Jakarta\",\n  \"lat\": -6.2088,\n  \"lng\": 106.8456,\n  \"notes\": \"Lutut kanan masih bengkak\"\n}"
             },
             "url": { "raw": "{{base_url}}/orders", "host": ["{{base_url}}"], "path": ["orders"] }
           }
@@ -406,7 +406,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"amount\": 350000,\n  \"method\": \"transfer\",\n  \"proof_url\": \"/uploads/payments/bukti-transfer.jpg\"\n}"
+              "raw": "{\n  \"order_id\": {{order_id}},\n  \"amount\": 350000,\n  \"method\": \"transfer\",\n  \"proof_url\": \"/uploads/payments/bukti-transfer.jpg\"\n}"
             },
             "url": { "raw": "{{base_url}}/payments/initiate", "host": ["{{base_url}}"], "path": ["payments", "initiate"] }
           }
@@ -446,7 +446,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"chief_complaint\": \"Nyeri lutut kanan pasca operasi ACL\",\n  \"diagnosis\": \"Post-op ACL reconstruction, fase rehabilitasi minggu ke-4\",\n  \"actions_taken\": \"ROM exercise, strengthening quadriceps, cold therapy\",\n  \"session_number\": 1,\n  \"check_in_at\": \"2026-05-14T08:00:00Z\",\n  \"check_out_at\": \"2026-05-14T09:00:00Z\"\n}"
+              "raw": "{\n  \"order_id\": {{order_id}},\n  \"chief_complaint\": \"Nyeri lutut kanan pasca operasi ACL\",\n  \"diagnosis\": \"Post-op ACL reconstruction, fase rehabilitasi minggu ke-4\",\n  \"actions_taken\": \"ROM exercise, strengthening quadriceps, cold therapy\",\n  \"session_number\": 1,\n  \"check_in_at\": \"2026-05-14T08:00:00Z\",\n  \"check_out_at\": \"2026-05-14T09:00:00Z\"\n}"
             },
             "url": { "raw": "{{base_url}}/records", "host": ["{{base_url}}"], "path": ["records"] }
           }

@@ -7,7 +7,7 @@ const { initiatePayment, confirmPayment, getPaymentByOrderId } = require('../con
 router.use(authenticate);
 
 router.post('/initiate', authorize('patient'), [
-  body('order_id').isUUID().withMessage('Valid order_id required'),
+  body('order_id').isInt().withMessage('Valid order_id required'),
   body('amount').isDecimal().withMessage('Valid amount required'),
   body('method').isIn(['transfer', 'cash']).withMessage('Method must be transfer or cash'),
 ], validate, initiatePayment);

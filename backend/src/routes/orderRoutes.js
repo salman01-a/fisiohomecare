@@ -11,8 +11,8 @@ router.use(authenticate);
 router.get('/', getAllOrders);
 
 router.post('/', authorize('patient'), [
-  body('therapist_id').isUUID().withMessage('Valid therapist_id required'),
-  body('schedule_id').isUUID().withMessage('Valid schedule_id required'),
+  body('therapist_id').isInt().withMessage('Valid therapist_id required'),
+  body('schedule_id').isInt().withMessage('Valid schedule_id required'),
   body('service_type').notEmpty().withMessage('Service type required'),
   body('address').notEmpty().withMessage('Address required'),
 ], validate, createOrder);
