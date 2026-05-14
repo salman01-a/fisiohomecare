@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { orderAPI, therapistAPI, recordAPI } from '../services/api';
+import Sidebar from '../components/Sidebar';
+import Topbar from '../components/Topbar';
+import StatusBadge from '../components/StatusBadge';
+import Modal from '../components/Modal';
 import './Dashboard.css';
 
 export default function TherapistDashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('orders');
   const [orders, setOrders] = useState([]);
   const [schedules, setSchedules] = useState([]);
@@ -12,6 +16,10 @@ export default function TherapistDashboard() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newSchedule, setNewSchedule] = useState({ date: '', start_time: '', end_time: '' });
+
+  // Therapy Record Modal State
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [recordForm, setRecordForm] = useState({ chief_complaint: '', diagnosis: '', actions_taken: '' });
 
   useEffect(() => { loadData(); }, [activeTab]);
 
@@ -27,18 +35,14 @@ export default function TherapistDashboard() {
           const res = await therapistAPI.getSchedules(tid);
           setSchedules(res.data || []);
         }
-      } else if (activeTab === 'profile') {
-        // Profile loaded from user context
       }
     } catch (err) { console.error(err); }
     setLoading(false);
   };
 
-  // Load therapist profile on mount
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        // Get the therapist profile from /auth/me which includes therapist data
         const meRes = await import('../services/api').then(m => m.authAPI.getMe());
         if (meRes.data?.therapist) {
           setProfile(meRes.data.therapist);
@@ -49,9 +53,35 @@ export default function TherapistDashboard() {
   }, []);
 
   const handleOrderStatus = async (id, status) => {
+    if (status === 'done') {
+      const order = orders.find(o => o.id === id);
+      setSelectedOrder(order);
+      return;
+    }
     try {
       await orderAPI.updateStatus(id, status);
       loadData();
+    } catch (err) { alert(err.message); }
+  };
+
+  const submitTherapyRecord = async (e) => {
+    e.preventDefault();
+    if (!selectedOrder) return;
+    try {
+      await recordAPI.create({
+        order_id: selectedOrder.id,
+        therapist_id: user?.therapist_id || profile?.id,
+        patient_id: selectedOrder.patient_id,
+        chief_complaint: recordForm.chief_complaint,
+        diagnosis: recordForm.diagnosis,
+        actions_taken: recordForm.actions_taken,
+        session_number: 1
+      });
+      await orderAPI.updateStatus(selectedOrder.id, 'done');
+      setSelectedOrder(null);
+      setRecordForm({ chief_complaint: '', diagnosis: '', actions_taken: '' });
+      loadData();
+      alert('Sesi berhasil diselesaikan dan Rekam Medis tersimpan!');
     } catch (err) { alert(err.message); }
   };
 
@@ -74,7 +104,6 @@ export default function TherapistDashboard() {
     } catch (err) { alert(err.message); }
   };
 
-  const statusBadge = (s) => <span className={`badge badge--${s}`}>{s}</span>;
   const nextStatus = { pending: null, confirmed: 'otw', otw: 'ongoing', ongoing: 'done' };
 
   const tabs = [
@@ -83,47 +112,33 @@ export default function TherapistDashboard() {
     { id: 'profile', label: 'Profil', icon: '👤' },
   ];
 
+  const profileStatusBadge = profile?.status === 'active' ? '✓' : profile?.status === 'pending' ? '⏳' : '';
+  
+  const rightTopbarContent = (
+    <>
+      {profile?.status === 'pending' && <span className="badge badge--pending">Menunggu Validasi</span>}
+      {profile?.status === 'active' && <span className="badge badge--active">Terverifikasi</span>}
+    </>
+  );
+
   return (
     <div className="dashboard">
-      <aside className={`sidebar sidebar--therapist ${sidebarOpen ? 'sidebar--open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-logo">
-            <div className="sidebar-logo-icon">+</div>
-            <span>FisioHomecare</span>
-          </div>
-          <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
-        </div>
-        <nav className="sidebar-nav">
-          {tabs.map(t => (
-            <button key={t.id} className={`nav-item ${activeTab === t.id ? 'nav-item--active' : ''}`}
-              onClick={() => { setActiveTab(t.id); setSidebarOpen(false); }}>
-              <span className="nav-icon">{t.icon}</span>{t.label}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="avatar avatar--green">{user?.name?.[0] || 'T'}</div>
-            <div className="sidebar-user-info">
-              <span className="sidebar-user-name">{user?.name}</span>
-              <span className="sidebar-user-role">Terapis {profile?.status === 'active' ? '✓' : profile?.status === 'pending' ? '⏳' : ''}</span>
-            </div>
-          </div>
-          <button className="logout-btn" onClick={logout}>Keluar</button>
-        </div>
-      </aside>
-
-      <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} style={{ display: sidebarOpen ? 'block' : 'none' }} />
+      <Sidebar 
+        tabs={tabs} 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        sidebarOpen={sidebarOpen} 
+        setSidebarOpen={setSidebarOpen} 
+        variant="therapist"
+        statusBadge={profileStatusBadge}
+      />
 
       <main className="main-content">
-        <header className="topbar">
-          <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>☰</button>
-          <h1 className="page-title">{tabs.find(t => t.id === activeTab)?.label}</h1>
-          <div className="topbar-right">
-            {profile?.status === 'pending' && <span className="badge badge--pending">Menunggu Validasi</span>}
-            {profile?.status === 'active' && <span className="badge badge--active">Terverifikasi</span>}
-          </div>
-        </header>
+        <Topbar 
+          title={tabs.find(t => t.id === activeTab)?.label} 
+          setSidebarOpen={setSidebarOpen} 
+          rightContent={rightTopbarContent}
+        />
 
         <div className="content">
           {profile?.status === 'pending' && (
@@ -146,7 +161,7 @@ export default function TherapistDashboard() {
                           <h3>{o.patient?.user?.name || 'Pasien'}</h3>
                           <p className="text-muted">{o.service?.name || o.service_type || '-'}</p>
                         </div>
-                        {statusBadge(o.status)}
+                        <StatusBadge status={o.status} />
                       </div>
                       <div className="order-card-body">
                         <div className="info-row"><span>📍 Alamat</span><span>{o.address}</span></div>
@@ -221,7 +236,7 @@ export default function TherapistDashboard() {
                 <div>
                   <h2>{user?.name}</h2>
                   <p className="text-muted">{user?.email}</p>
-                  {profile && statusBadge(profile.status)}
+                  {profile && <StatusBadge status={profile.status} />}
                 </div>
               </div>
               {profile && (
@@ -230,7 +245,7 @@ export default function TherapistDashboard() {
                   <div className="info-row"><span>🏥 Spesialisasi</span><span>{profile.specialization || '-'}</span></div>
                   <div className="info-row"><span>📄 No. STR</span><span>{profile.license_number || '-'}</span></div>
                   <div className="info-row"><span>⭐ Rating</span><span>{profile.rating || '0.00'}</span></div>
-                  <div className="info-row"><span>📋 Status</span>{statusBadge(profile.status)}</div>
+                  <div className="info-row"><span>📋 Status</span><StatusBadge status={profile.status} /></div>
                   {profile.validated_at && <div className="info-row"><span>✅ Divalidasi</span><span>{new Date(profile.validated_at).toLocaleDateString('id-ID')}</span></div>}
                 </div>
               )}
@@ -238,6 +253,49 @@ export default function TherapistDashboard() {
           ) : null}
         </div>
       </main>
+
+      <Modal 
+        isOpen={!!selectedOrder} 
+        onClose={() => setSelectedOrder(null)} 
+        title="Isi Rekam Medis"
+      >
+        <form onSubmit={submitTherapyRecord}>
+          <div className="form-group" style={{ marginBottom: '12px' }}>
+            <label>Keluhan Utama</label>
+            <textarea 
+              rows="3" 
+              required
+              value={recordForm.chief_complaint}
+              onChange={e => setRecordForm({...recordForm, chief_complaint: e.target.value})}
+              placeholder="Contoh: Pasien mengeluh nyeri pada lutut kanan..."
+            />
+          </div>
+          <div className="form-group" style={{ marginBottom: '12px' }}>
+            <label>Diagnosis Fisioterapi</label>
+            <input 
+              type="text" 
+              required
+              value={recordForm.diagnosis}
+              onChange={e => setRecordForm({...recordForm, diagnosis: e.target.value})}
+              placeholder="Contoh: Osteoarthritis Knee Dextra"
+            />
+          </div>
+          <div className="form-group" style={{ marginBottom: '12px' }}>
+            <label>Tindakan yang Dilakukan</label>
+            <textarea 
+              rows="4" 
+              required
+              value={recordForm.actions_taken}
+              onChange={e => setRecordForm({...recordForm, actions_taken: e.target.value})}
+              placeholder="Contoh: 1. TENS 15 menit&#10;2. Ultrasound 5 menit"
+            />
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn btn--danger" onClick={() => setSelectedOrder(null)}>Batal</button>
+            <button type="submit" className="btn btn--primary">Simpan & Selesai</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

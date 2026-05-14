@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { dashboardAPI, therapistAPI, serviceAPI, orderAPI, paymentAPI } from '../services/api';
+import Sidebar from '../components/Sidebar';
+import Topbar from '../components/Topbar';
+import StatCard from '../components/StatCard';
+import StatusBadge from '../components/StatusBadge';
+import Modal from '../components/Modal';
 import './Dashboard.css';
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState(null);
   const [orders, setOrders] = useState([]);
@@ -13,6 +16,11 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Service CRUD State
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [editingService, setEditingService] = useState(null);
+  const [serviceForm, setServiceForm] = useState({ name: '', description: '', price: '', duration_minutes: 60, is_active: true });
 
   useEffect(() => { loadData(); }, [activeTab]);
 
@@ -57,14 +65,37 @@ export default function AdminDashboard() {
     } catch (err) { alert(err.message); }
   };
 
-  const handleConfirmPayment = async (orderId, status) => {
+  const handleOpenServiceModal = (service = null) => {
+    if (service) {
+      setEditingService(service);
+      setServiceForm(service);
+    } else {
+      setEditingService(null);
+      setServiceForm({ name: '', description: '', price: '', duration_minutes: 60, is_active: true });
+    }
+    setIsServiceModalOpen(true);
+  };
+
+  const handleServiceSubmit = async (e) => {
+    e.preventDefault();
     try {
-      await paymentAPI.confirm(orderId, status);
+      if (editingService) {
+        await serviceAPI.update(editingService.id, serviceForm);
+      } else {
+        await serviceAPI.create(serviceForm);
+      }
+      setIsServiceModalOpen(false);
       loadData();
     } catch (err) { alert(err.message); }
   };
 
-  const statusBadge = (status) => <span className={`badge badge--${status}`}>{status}</span>;
+  const handleServiceDelete = async (id) => {
+    if (!confirm('Hapus layanan ini?')) return;
+    try {
+      await serviceAPI.delete(id);
+      loadData();
+    } catch (err) { alert(err.message); }
+  };
 
   const formatCurrency = (val) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0);
 
@@ -77,46 +108,20 @@ export default function AdminDashboard() {
 
   return (
     <div className="dashboard">
-      <aside className={`sidebar ${sidebarOpen ? 'sidebar--open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-logo">
-            <div className="sidebar-logo-icon">+</div>
-            <span>FisioHomecare</span>
-          </div>
-          <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
-        </div>
-        <nav className="sidebar-nav">
-          {tabs.map(t => (
-            <button key={t.id} className={`nav-item ${activeTab === t.id ? 'nav-item--active' : ''}`}
-              onClick={() => { setActiveTab(t.id); setSidebarOpen(false); }}>
-              <span className="nav-icon">{t.icon}</span>{t.label}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="avatar">{user?.name?.[0] || 'A'}</div>
-            <div className="sidebar-user-info">
-              <span className="sidebar-user-name">{user?.name}</span>
-              <span className="sidebar-user-role">Administrator</span>
-            </div>
-          </div>
-          <button className="logout-btn" onClick={logout}>
-            Keluar
-          </button>
-        </div>
-      </aside>
-
-      <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} style={{ display: sidebarOpen ? 'block' : 'none' }} />
+      <Sidebar 
+        tabs={tabs} 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        sidebarOpen={sidebarOpen} 
+        setSidebarOpen={setSidebarOpen} 
+        variant="admin"
+      />
 
       <main className="main-content">
-        <header className="topbar">
-          <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>☰</button>
-          <h1 className="page-title">{tabs.find(t => t.id === activeTab)?.label}</h1>
-          <div className="topbar-right">
-            <span className="topbar-greeting">Halo, {user?.name} 👋</span>
-          </div>
-        </header>
+        <Topbar 
+          title={tabs.find(t => t.id === activeTab)?.label} 
+          setSidebarOpen={setSidebarOpen} 
+        />
 
         <div className="content">
           {loading ? (
@@ -124,20 +129,10 @@ export default function AdminDashboard() {
           ) : activeTab === 'overview' ? (
             <div className="overview">
               <div className="stats-grid">
-                {[
-                  { label: 'Total Order', value: stats?.totalOrders || 0, icon: '📦', color: '#6366f1' },
-                  { label: 'Pendapatan', value: formatCurrency(stats?.totalRevenue), icon: '💰', color: '#10b981' },
-                  { label: 'Terapis Aktif', value: stats?.activeTherapists || 0, icon: '👨‍⚕️', color: '#06b6d4' },
-                  { label: 'Menunggu Validasi', value: stats?.pendingTherapists || 0, icon: '⏳', color: '#f59e0b' },
-                ].map((s, i) => (
-                  <div key={i} className="stat-card" style={{ '--accent': s.color }}>
-                    <div className="stat-icon">{s.icon}</div>
-                    <div className="stat-info">
-                      <span className="stat-value">{s.value}</span>
-                      <span className="stat-label">{s.label}</span>
-                    </div>
-                  </div>
-                ))}
+                <StatCard label="Total Order" value={stats?.totalOrders || 0} icon="📦" color="#6366f1" />
+                <StatCard label="Pendapatan" value={formatCurrency(stats?.totalRevenue)} icon="💰" color="#10b981" />
+                <StatCard label="Terapis Aktif" value={stats?.activeTherapists || 0} icon="👨‍⚕️" color="#06b6d4" />
+                <StatCard label="Menunggu Validasi" value={stats?.pendingTherapists || 0} icon="⏳" color="#f59e0b" />
               </div>
               <div className="section-card">
                 <div className="section-header">
@@ -154,7 +149,7 @@ export default function AdminDashboard() {
                             <td>{o.patient?.user?.name || o.patient_id}</td>
                             <td>{o.therapist?.user?.name || o.therapist_id}</td>
                             <td>{o.service?.name || o.service_type || '-'}</td>
-                            <td>{statusBadge(o.status)}</td>
+                            <td><StatusBadge status={o.status} /></td>
                             <td className="td-truncate">{o.address}</td>
                           </tr>
                         ))}
@@ -184,7 +179,7 @@ export default function AdminDashboard() {
                             <td>{o.therapist?.user?.name || '-'}</td>
                             <td>{o.service?.name || o.service_type || '-'}</td>
                             <td className="td-truncate">{o.address}</td>
-                            <td>{statusBadge(o.status)}</td>
+                            <td><StatusBadge status={o.status} /></td>
                             <td>
                               <div className="action-btns">
                                 {o.status === 'pending' && <button className="btn btn--sm btn--primary" onClick={() => handleOrderStatus(o.id, 'confirmed')}>Konfirmasi</button>}
@@ -211,7 +206,7 @@ export default function AdminDashboard() {
                           <h3>{t.user?.name || 'Terapis'}</h3>
                           <p className="text-muted">{t.specialization || 'Umum'}</p>
                         </div>
-                        {statusBadge(t.status)}
+                        <StatusBadge status={t.status} />
                       </div>
                       <div className="therapist-card-body">
                         <div className="info-row"><span>Email</span><span>{t.user?.email}</span></div>
@@ -241,18 +236,28 @@ export default function AdminDashboard() {
             </div>
           ) : activeTab === 'services' ? (
             <div className="section-card">
+              <div className="section-header">
+                <h2>Daftar Layanan</h2>
+                <button className="btn btn--primary" onClick={() => handleOpenServiceModal()}>+ Tambah Layanan</button>
+              </div>
               {services.length === 0 ? <p className="empty-text">Belum ada layanan</p> : (
                 <div className="table-wrap">
                   <table className="data-table">
-                    <thead><tr><th>Nama</th><th>Deskripsi</th><th>Harga</th><th>Durasi</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Nama</th><th>Deskripsi</th><th>Harga</th><th>Durasi</th><th>Status</th><th>Aksi</th></tr></thead>
                     <tbody>
                       {services.map(s => (
-                        <tr key={s.id}>
+                         <tr key={s.id}>
                           <td className="text-bold">{s.name}</td>
                           <td className="td-truncate">{s.description || '-'}</td>
                           <td>{formatCurrency(s.price)}</td>
                           <td>{s.duration_minutes} menit</td>
                           <td>{s.is_active ? <span className="badge badge--active">Aktif</span> : <span className="badge badge--suspended">Nonaktif</span>}</td>
+                          <td>
+                            <div className="action-btns">
+                              <button className="btn btn--sm btn--primary" onClick={() => handleOpenServiceModal(s)}>Edit</button>
+                              <button className="btn btn--sm btn--danger" onClick={() => handleServiceDelete(s.id)}>Hapus</button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -263,6 +268,67 @@ export default function AdminDashboard() {
           ) : null}
         </div>
       </main>
+
+      <Modal 
+        isOpen={isServiceModalOpen} 
+        onClose={() => setIsServiceModalOpen(false)} 
+        title={editingService ? "Edit Layanan" : "Tambah Layanan Baru"}
+      >
+        <form onSubmit={handleServiceSubmit}>
+          <div className="form-group" style={{ marginBottom: '12px' }}>
+            <label>Nama Layanan</label>
+            <input 
+              type="text" 
+              required
+              value={serviceForm.name}
+              onChange={e => setServiceForm({...serviceForm, name: e.target.value})}
+            />
+          </div>
+          <div className="form-group" style={{ marginBottom: '12px' }}>
+            <label>Deskripsi</label>
+            <textarea 
+              rows="3" 
+              value={serviceForm.description}
+              onChange={e => setServiceForm({...serviceForm, description: e.target.value})}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label>Harga (Rp)</label>
+              <input 
+                type="number" 
+                required
+                value={serviceForm.price}
+                onChange={e => setServiceForm({...serviceForm, price: e.target.value})}
+              />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label>Durasi (Menit)</label>
+              <input 
+                type="number" 
+                required
+                value={serviceForm.duration_minutes}
+                onChange={e => setServiceForm({...serviceForm, duration_minutes: e.target.value})}
+              />
+            </div>
+          </div>
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label>Status Layanan</label>
+            <select 
+              value={serviceForm.is_active ? 'true' : 'false'}
+              onChange={e => setServiceForm({...serviceForm, is_active: e.target.value === 'true'})}
+            >
+              <option value="true">Aktif</option>
+              <option value="false">Nonaktif</option>
+            </select>
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn btn--danger" onClick={() => setIsServiceModalOpen(false)}>Batal</button>
+            <button type="submit" className="btn btn--primary">Simpan</button>
+          </div>
+        </form>
+      </Modal>
+
     </div>
   );
 }

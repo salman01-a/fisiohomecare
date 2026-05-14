@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
+import RegisterTherapist from './pages/RegisterTherapist';
 import AdminDashboard from './pages/AdminDashboard';
 import TherapistDashboard from './pages/TherapistDashboard';
 
@@ -29,6 +30,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register-therapist" element={<RegisterTherapist />} />
           <Route
             path="/admin/*"
             element={
