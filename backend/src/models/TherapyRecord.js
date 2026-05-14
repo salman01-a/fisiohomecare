@@ -3,12 +3,12 @@ const { DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   const TherapyRecord = sequelize.define('TherapyRecord', {
     id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true,
+  type: DataTypes.INTEGER,
+  autoIncrement: true,
+  primaryKey: true
     },
     order_id: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: false,
       unique: true,
       references: {
@@ -17,7 +17,7 @@ module.exports = (sequelize) => {
       },
     },
     therapist_id: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
         model: 'therapists',
@@ -25,7 +25,7 @@ module.exports = (sequelize) => {
       },
     },
     patient_id: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: false,
       references: {
         model: 'patients',
