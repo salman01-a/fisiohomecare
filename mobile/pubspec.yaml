@@ -1,0 +1,41 @@
+name: fisiohomecare_mobile
+description: "FisioHomecare - Patient Mobile App"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # HTTP client
+  dio: ^5.4.0
+
+  # State management
+  provider: ^6.1.1
+
+  # Local storage for token
+  shared_preferences: ^2.2.2
+
+  # Image picker for uploading photos & payment proof
+  image_picker: ^1.0.7
+
+  # Date/currency formatting
+  intl: ^0.19.0
+
+  # Google Fonts
+  google_fonts: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
