@@ -57,7 +57,7 @@ export const therapistAPI = {
   getById: (id) => request(`/therapists/${id}`),
   validate: (id, status) =>
     request(`/therapists/${id}/validate`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify({ status }),
     }),
   getSchedules: (id, params = {}) => {
@@ -109,7 +109,7 @@ export const orderAPI = {
     }),
   updateStatus: (id, status) =>
     request(`/orders/${id}/status`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify({ status }),
     }),
   delete: (id) =>
@@ -127,7 +127,7 @@ export const paymentAPI = {
     }),
   confirm: (orderId, status) =>
     request(`/payments/${orderId}/confirm`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify({ status }),
     }),
   getByOrderId: (orderId) => request(`/payments/${orderId}`),

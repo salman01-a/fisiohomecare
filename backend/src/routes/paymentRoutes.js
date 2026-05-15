@@ -12,7 +12,7 @@ router.post('/initiate', authorize('patient'), [
   body('method').isIn(['transfer', 'cash']).withMessage('Method must be transfer or cash'),
 ], validate, initiatePayment);
 
-router.patch('/:order_id/confirm', authorize('admin'), [
+router.put('/:order_id/confirm', authorize('admin'), [
   body('status').isIn(['confirmed', 'rejected']).withMessage('Status must be confirmed or rejected'),
 ], validate, confirmPayment);
 

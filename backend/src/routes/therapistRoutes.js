@@ -12,7 +12,7 @@ router.use(authenticate);
 router.get('/', getAllTherapists);
 router.get('/:id', getTherapistById);
 
-router.patch('/:id/validate', authorize('admin'), [
+router.put('/:id/validate', authorize('admin'), [
   body('status').isIn(['active', 'suspended']).withMessage('Status must be active or suspended'),
 ], validate, validateTherapist);
 

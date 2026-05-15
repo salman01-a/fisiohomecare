@@ -171,7 +171,7 @@
         {
           "name": "Validate Therapist (Admin)",
           "request": {
-            "method": "PATCH",
+            "method": "PUT",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type", "value": "application/json" }
@@ -338,7 +338,7 @@
         {
           "name": "Update Order Status (Therapist - Confirm)",
           "request": {
-            "method": "PATCH",
+            "method": "PUT",
             "header": [
               { "key": "Authorization", "value": "Bearer {{therapist_token}}" },
               { "key": "Content-Type", "value": "application/json" }
@@ -350,7 +350,7 @@
         {
           "name": "Update Order Status (Therapist - OTW)",
           "request": {
-            "method": "PATCH",
+            "method": "PUT",
             "header": [
               { "key": "Authorization", "value": "Bearer {{therapist_token}}" },
               { "key": "Content-Type", "value": "application/json" }
@@ -362,7 +362,7 @@
         {
           "name": "Update Order Status (Therapist - Ongoing)",
           "request": {
-            "method": "PATCH",
+            "method": "PUT",
             "header": [
               { "key": "Authorization", "value": "Bearer {{therapist_token}}" },
               { "key": "Content-Type", "value": "application/json" }
@@ -374,7 +374,7 @@
         {
           "name": "Update Order Status (Therapist - Done)",
           "request": {
-            "method": "PATCH",
+            "method": "PUT",
             "header": [
               { "key": "Authorization", "value": "Bearer {{therapist_token}}" },
               { "key": "Content-Type", "value": "application/json" }
@@ -414,7 +414,7 @@
         {
           "name": "Confirm Payment (Admin)",
           "request": {
-            "method": "PATCH",
+            "method": "PUT",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type", "value": "application/json" }

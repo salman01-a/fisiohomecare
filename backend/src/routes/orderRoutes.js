@@ -19,7 +19,7 @@ router.post('/', authorize('patient'), [
 
 router.get('/:id', getOrderById);
 
-router.patch('/:id/status', authorize('admin', 'therapist'), requireValidatedTherapist, [
+router.put('/:id/status', authorize('admin', 'therapist'), requireValidatedTherapist, [
   body('status').isIn(['pending', 'confirmed', 'otw', 'ongoing', 'done', 'cancelled'])
     .withMessage('Invalid status'),
 ], validate, updateOrderStatus);

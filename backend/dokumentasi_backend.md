@@ -256,7 +256,7 @@ Terapis tetap bisa login dan upload dokumen lisensi (STR) untuk proses validasi.
 |--------|----------|------|------|------------|
 | GET | `/therapists` | ✅ | Semua | List terapis (filter: `status`, `specialization`) |
 | GET | `/therapists/:id` | ✅ | Semua | Detail terapis |
-| PATCH | `/therapists/:id/validate` | ✅ | Admin | Validasi terapis (`active` / `suspended`) |
+| PUT | `/therapists/:id/validate` | ✅ | Admin | Validasi terapis (`active` / `suspended`) |
 | GET | `/therapists/:id/schedules` | ✅ | Semua | Lihat jadwal terapis (filter: `date`, `is_booked`) |
 | POST | `/therapists/:id/schedules` | ✅ | Admin, Terapis* | Buat slot jadwal baru |
 | DELETE | `/therapists/:id/schedules/:sid` | ✅ | Admin, Terapis* | Hapus slot jadwal |
@@ -280,7 +280,7 @@ Terapis tetap bisa login dan upload dokumen lisensi (STR) untuk proses validasi.
 | GET | `/orders` | ✅ | Semua | List order (auto-filter per role) |
 | POST | `/orders` | ✅ | Pasien | Buat order baru |
 | GET | `/orders/:id` | ✅ | Semua | Detail order |
-| PATCH | `/orders/:id/status` | ✅ | Admin, Terapis* | Update status order |
+| PUT | `/orders/:id/status` | ✅ | Admin, Terapis* | Update status order |
 | DELETE | `/orders/:id` | ✅ | Semua | Batalkan order |
 
 **Alur Status Order:**
@@ -295,7 +295,7 @@ cancelled  cancelled  cancelled
 | Method | Endpoint | Auth | Role | Keterangan |
 |--------|----------|------|------|------------|
 | POST | `/payments/initiate` | ✅ | Pasien | Kirim pembayaran + bukti |
-| PATCH | `/payments/:order_id/confirm` | ✅ | Admin | Konfirmasi/tolak pembayaran |
+| PUT | `/payments/:order_id/confirm` | ✅ | Admin | Konfirmasi/tolak pembayaran |
 | GET | `/payments/:order_id` | ✅ | Semua | Lihat status pembayaran |
 
 ### 5.6 Therapy Records (`/v1/records`)
