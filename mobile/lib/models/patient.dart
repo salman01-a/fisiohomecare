@@ -21,8 +21,8 @@ class Patient {
 
   factory Patient.fromJson(Map<String, dynamic> json) {
     return Patient(
-      id: json['id'] ?? '',
-      userId: json['user_id'] ?? '',
+      id: json['id']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? '',
       address: json['address'],
       medicalHistory: json['medical_history'],
       emergencyContact: json['emergency_contact'],

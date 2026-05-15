@@ -54,11 +54,11 @@ class Order {
 
   factory Order.fromJson(Map<String, dynamic> json) {
     return Order(
-      id: json['id'] ?? '',
-      patientId: json['patient_id'] ?? '',
-      therapistId: json['therapist_id'] ?? '',
-      scheduleId: json['schedule_id'] ?? '',
-      serviceId: json['service_id'],
+      id: json['id']?.toString() ?? '',
+      patientId: json['patient_id']?.toString() ?? '',
+      therapistId: json['therapist_id']?.toString() ?? '',
+      scheduleId: json['schedule_id']?.toString() ?? '',
+      serviceId: json['service_id']?.toString(),
       serviceType: json['service_type'],
       address: json['address'] ?? '',
       lat: double.tryParse(json['lat']?.toString() ?? ''),
@@ -66,30 +66,30 @@ class Order {
       status: json['status'] ?? 'pending',
       documentUrl: json['document_url'],
       notes: json['notes'],
-      createdAt:
-          json['created_at'] != null
-              ? DateTime.parse(json['created_at'])
-              : null,
-      updatedAt:
-          json['updated_at'] != null
-              ? DateTime.parse(json['updated_at'])
-              : null,
-      therapist:
-          json['therapist'] != null
-              ? Therapist.fromJson(json['therapist'])
-              : null,
-      service:
-          json['service'] != null ? Service.fromJson(json['service']) : null,
-      schedule:
-          json['schedule'] != null ? Schedule.fromJson(json['schedule']) : null,
-      patient:
-          json['patient'] != null ? Patient.fromJson(json['patient']) : null,
-      payment:
-          json['payment'] != null ? Payment.fromJson(json['payment']) : null,
-      therapyRecord:
-          json['therapy_record'] != null
-              ? TherapyRecord.fromJson(json['therapy_record'])
-              : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null,
+      therapist: json['therapist'] != null
+          ? Therapist.fromJson(json['therapist'])
+          : null,
+      service: json['service'] != null
+          ? Service.fromJson(json['service'])
+          : null,
+      schedule: json['schedule'] != null
+          ? Schedule.fromJson(json['schedule'])
+          : null,
+      patient: json['patient'] != null
+          ? Patient.fromJson(json['patient'])
+          : null,
+      payment: json['payment'] != null
+          ? Payment.fromJson(json['payment'])
+          : null,
+      therapyRecord: json['therapy_record'] != null
+          ? TherapyRecord.fromJson(json['therapy_record'])
+          : null,
     );
   }
 

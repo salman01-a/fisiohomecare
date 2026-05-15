@@ -33,12 +33,8 @@ class ApiClient {
           return handler.next(response);
         },
         onError: (error, handler) {
-          // Extract error message from API response
-          final message =
-              error.response?.data?['message'] ?? 'Something went wrong';
-          error = error.copyWith(
-            message: message is String ? message : error.message,
-          );
+          // Just pass the error along. The providers will extract the message.
+          // This prevents hiding the actual connection errors or malformed response errors.
           return handler.next(error);
         },
       ),

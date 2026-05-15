@@ -22,8 +22,11 @@ import 'screens/record/record_list_screen.dart';
 import 'screens/record/record_detail_screen.dart';
 import 'screens/profile/profile_screen.dart';
 
-void main() {
+import 'package:intl/date_symbol_data_local.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id_ID', null);
   runApp(const FisioHomecareApp());
 }
 

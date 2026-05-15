@@ -27,10 +27,10 @@ class TherapyRecord {
 
   factory TherapyRecord.fromJson(Map<String, dynamic> json) {
     return TherapyRecord(
-      id: json['id'] ?? '',
-      orderId: json['order_id'] ?? '',
-      therapistId: json['therapist_id'] ?? '',
-      patientId: json['patient_id'] ?? '',
+      id: json['id']?.toString() ?? '',
+      orderId: json['order_id']?.toString() ?? '',
+      therapistId: json['therapist_id']?.toString() ?? '',
+      patientId: json['patient_id']?.toString() ?? '',
       chiefComplaint: json['chief_complaint'],
       diagnosis: json['diagnosis'],
       actionsTaken: json['actions_taken'],

@@ -17,8 +17,8 @@ class Schedule {
 
   factory Schedule.fromJson(Map<String, dynamic> json) {
     return Schedule(
-      id: json['id'] ?? '',
-      therapistId: json['therapist_id'] ?? '',
+      id: json['id']?.toString() ?? '',
+      therapistId: json['therapist_id']?.toString() ?? '',
       date: json['date'] ?? '',
       startTime: json['start_time'] ?? '',
       endTime: json['end_time'] ?? '',
