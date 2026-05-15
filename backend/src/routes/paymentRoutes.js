@@ -2,9 +2,12 @@ const router = require('express').Router();
 const { body } = require('express-validator');
 const validate = require('../middleware/validate');
 const { authenticate, authorize } = require('../middleware/auth');
-const { initiatePayment, confirmPayment, getPaymentByOrderId } = require('../controllers/paymentController');
+const { getAllPayments, initiatePayment, confirmPayment, getPaymentByOrderId } = require('../controllers/paymentController');
 
 router.use(authenticate);
+
+// Admin: list all payments
+router.get('/', authorize('admin'), getAllPayments);
 
 router.post('/initiate', authorize('patient'), [
   body('order_id').isInt().withMessage('Valid order_id required'),

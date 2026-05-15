@@ -1,4 +1,4 @@
-const { Payment, Order } = require('../models');
+const { Payment, Order, Patient, Therapist, User } = require('../models');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 
@@ -51,4 +51,30 @@ const getPaymentByOrderId = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { initiatePayment, confirmPayment, getPaymentByOrderId };
+const getAllPayments = async (req, res, next) => {
+  try {
+    const { status } = req.query;
+    const where = {};
+    if (status) where.status = status;
+
+    const payments = await Payment.findAll({
+      where,
+      include: [
+        {
+          association: 'order',
+          include: [
+            { association: 'patient', include: [{ association: 'user', attributes: ['id', 'name', 'email', 'phone'] }] },
+            { association: 'therapist', include: [{ association: 'user', attributes: ['id', 'name', 'email', 'phone'] }] },
+            { association: 'schedule' },
+          ],
+        },
+        { association: 'confirmer', attributes: ['id', 'name'] },
+      ],
+      order: [['created_at', 'DESC']],
+    });
+
+    return ApiResponse.success(res, payments, 'Payments retrieved successfully');
+  } catch (error) { next(error); }
+};
+
+module.exports = { getAllPayments, initiatePayment, confirmPayment, getPaymentByOrderId };

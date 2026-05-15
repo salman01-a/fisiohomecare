@@ -120,6 +120,10 @@ export const orderAPI = {
 
 // Payments
 export const paymentAPI = {
+  getAll: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/payments${query ? `?${query}` : ''}`);
+  },
   initiate: (paymentData) =>
     request('/payments/initiate', {
       method: 'POST',
