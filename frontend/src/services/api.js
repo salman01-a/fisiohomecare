@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:3000/v1';
+const BASE_URL = 'http://192.168.1.7:3000/v1';
 
 function getToken() {
   return localStorage.getItem('token');
@@ -141,6 +141,19 @@ export const paymentAPI = {
       body: JSON.stringify({ status }),
     }),
   getByOrderId: (orderId) => request(`/payments/${orderId}`),
+  getProofBlobUrl: async (orderId) => {
+    const token = getToken();
+    const response = await fetch(`${BASE_URL}/payments/${orderId}/proof`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    if (!response.ok) {
+      throw new Error('Gagal memuat bukti pembayaran');
+    }
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+  },
 };
 
 // Therapy Records

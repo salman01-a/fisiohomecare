@@ -15,7 +15,7 @@ const initializeFirebase = () => {
 
     // Pastikan Anda menambahkan FIREBASE_STORAGE_BUCKET di file .env Anda
     // Contoh isi .env: FIREBASE_STORAGE_BUCKET=homecare-2b018.appspot.com
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.GCS_BUCKET_NAME;
 
     if (process.env.NODE_ENV === 'production' && !process.env.FIREBASE_SERVICE_ACCOUNT) {
       firebaseApp = admin.initializeApp({

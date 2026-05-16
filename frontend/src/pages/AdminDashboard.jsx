@@ -92,6 +92,15 @@ export default function AdminDashboard() {
     } catch (err) { alert(err.message); }
   };
 
+  const handleViewProof = async (orderId) => {
+    try {
+      const blobUrl = await paymentAPI.getProofBlobUrl(orderId);
+      window.open(blobUrl, '_blank');
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const handleOpenServiceModal = (service = null) => {
     if (service) {
       setEditingService(service);
@@ -288,7 +297,7 @@ export default function AdminDashboard() {
                             <td style={{textTransform:'capitalize'}}>{p.method}</td>
                             <td>
                               {p.proof_url ? (
-                                <a href={p.proof_url} target="_blank" rel="noreferrer" className="link-btn">Lihat</a>
+                                <button type="button" className="btn btn--sm btn--primary" onClick={() => handleViewProof(p.order_id)}>Lihat</button>
                               ) : <span className="text-muted">-</span>}
                             </td>
                             <td><StatusBadge status={p.status} /></td>
@@ -459,7 +468,7 @@ export default function AdminDashboard() {
                 <div className="info-row"><span>Jumlah</span><span className="text-bold">{formatCurrency(selectedOrder.payment.amount)}</span></div>
                 <div className="info-row"><span>Metode</span><span style={{textTransform:'capitalize'}}>{selectedOrder.payment.method}</span></div>
                 <div className="info-row"><span>Status</span><StatusBadge status={selectedOrder.payment.status} /></div>
-                {selectedOrder.payment.proof_url && <div className="info-row"><span>Bukti</span><a href={selectedOrder.payment.proof_url} target="_blank" rel="noreferrer" className="link-btn">Lihat Bukti →</a></div>}
+                {selectedOrder.payment.proof_url && <div className="info-row"><span>Bukti</span><button type="button" className="link-btn" style={{background: 'none', border: 'none', cursor: 'pointer', padding: 0}} onClick={() => handleViewProof(selectedOrder.id)}>Lihat Bukti →</button></div>}
               </div>
             )}
             {selectedOrder.therapyRecord && (

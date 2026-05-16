@@ -20,6 +20,7 @@ export default function TherapistDashboard() {
   // Therapy Record Modal State
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [recordForm, setRecordForm] = useState({ chief_complaint: '', diagnosis: '', actions_taken: '' });
+  const [submittingRecord, setSubmittingRecord] = useState(false);
 
   useEffect(() => { loadData(); }, [activeTab]);
 
@@ -66,23 +67,32 @@ export default function TherapistDashboard() {
 
   const submitTherapyRecord = async (e) => {
     e.preventDefault();
-    if (!selectedOrder) return;
+    if (!selectedOrder || submittingRecord) return;
+    setSubmittingRecord(true);
     try {
-      await recordAPI.create({
-        order_id: selectedOrder.id,
-        therapist_id: profile?.id,
-        patient_id: selectedOrder.patient_id,
-        chief_complaint: recordForm.chief_complaint,
-        diagnosis: recordForm.diagnosis,
-        actions_taken: recordForm.actions_taken,
-        session_number: 1
-      });
+      try {
+        await recordAPI.create({
+          order_id: selectedOrder.id,
+          therapist_id: profile?.id,
+          patient_id: selectedOrder.patient_id,
+          chief_complaint: recordForm.chief_complaint,
+          diagnosis: recordForm.diagnosis,
+          actions_taken: recordForm.actions_taken,
+          session_number: 1
+        });
+      } catch (createErr) {
+        if (!createErr.message.includes('already exists')) {
+          throw createErr;
+        }
+        // If it already exists, just proceed to mark as done
+      }
       await orderAPI.updateStatus(selectedOrder.id, 'done');
       setSelectedOrder(null);
       setRecordForm({ chief_complaint: '', diagnosis: '', actions_taken: '' });
       loadData();
       alert('Sesi berhasil diselesaikan dan Rekam Medis tersimpan!');
     } catch (err) { alert(err.message); }
+    finally { setSubmittingRecord(false); }
   };
 
   const handleCreateSchedule = async (e) => {
@@ -291,8 +301,10 @@ export default function TherapistDashboard() {
             />
           </div>
           <div className="modal-actions">
-            <button type="button" className="btn btn--danger" onClick={() => setSelectedOrder(null)}>Batal</button>
-            <button type="submit" className="btn btn--primary">Simpan & Selesai</button>
+            <button type="button" className="btn btn--danger" onClick={() => setSelectedOrder(null)} disabled={submittingRecord}>Batal</button>
+            <button type="submit" className="btn btn--primary" disabled={submittingRecord}>
+              {submittingRecord ? 'Menyimpan...' : 'Simpan & Selesai'}
+            </button>
           </div>
         </form>
       </Modal>
