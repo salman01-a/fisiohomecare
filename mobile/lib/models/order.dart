@@ -20,6 +20,8 @@ class Order {
   final String? notes;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final int? rating;
+  final String? ratingComment;
 
   // Nested relations (from API includes)
   final Therapist? therapist;
@@ -50,6 +52,8 @@ class Order {
     this.patient,
     this.payment,
     this.therapyRecord,
+    this.rating,
+    this.ratingComment,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -90,6 +94,8 @@ class Order {
       therapyRecord: json['therapy_record'] != null
           ? TherapyRecord.fromJson(json['therapy_record'])
           : null,
+      rating: json['rating'] != null ? int.tryParse(json['rating'].toString()) : null,
+      ratingComment: json['rating_comment'],
     );
   }
 

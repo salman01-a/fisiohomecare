@@ -7,6 +7,7 @@ const createRecord = async (req, res, next) => {
   try {
     const { 
       order_id, chief_complaint, diagnosis, actions_taken, session_number, check_in_at, check_out_at,
+      photo_urls,
       // NoSQL Fields:
       flexible_notes, progress_rating, attachments 
     } = req.body;
@@ -37,6 +38,7 @@ const createRecord = async (req, res, next) => {
       order_id, therapist_id: therapist.id, patient_id: order.patient_id,
       chief_complaint, diagnosis, actions_taken, session_number: currentSession,
       check_in_at, check_out_at,
+      photo_urls: photo_urls || null,
     });
 
     // 2. Simpan Catatan Fleksibel, Progress, Foto ke NoSQL (Firestore)

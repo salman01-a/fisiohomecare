@@ -16,6 +16,9 @@ class TherapyRecord {
   // --- NoSQL fields (dari Firestore via backend) ---
   final NosqlDetails? nosqlDetails;
 
+  // --- SQL photo URLs (foto dari terapis) ---
+  final List<String> photoUrls;
+
   TherapyRecord({
     required this.id,
     required this.orderId,
@@ -29,6 +32,7 @@ class TherapyRecord {
     this.checkOutAt,
     this.createdAt,
     this.nosqlDetails,
+    this.photoUrls = const [],
   });
 
   factory TherapyRecord.fromJson(Map<String, dynamic> json) {
@@ -56,7 +60,24 @@ class TherapyRecord {
       nosqlDetails: json['nosql_details'] != null
           ? NosqlDetails.fromJson(json['nosql_details'])
           : null,
+      photoUrls: _parsePhotoUrls(json['photo_urls']),
     );
+  }
+
+  static List<String> _parsePhotoUrls(dynamic data) {
+    if (data == null) return [];
+    if (data is List) return data.map((e) => e.toString()).toList();
+    if (data is String) {
+      try {
+        final parsed = List<String>.from(
+          (data.startsWith('[') ? data : '[]') as Iterable,
+        );
+        return parsed;
+      } catch (_) {
+        return [];
+      }
+    }
+    return [];
   }
 
   Map<String, dynamic> toJson() {

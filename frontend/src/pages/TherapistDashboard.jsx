@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { orderAPI, therapistAPI, recordAPI } from '../services/api';
+import { orderAPI, therapistAPI, recordAPI, uploadAPI } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import StatusBadge from '../components/StatusBadge';
@@ -21,6 +21,8 @@ export default function TherapistDashboard() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [recordForm, setRecordForm] = useState({ chief_complaint: '', diagnosis: '', actions_taken: '' });
   const [submittingRecord, setSubmittingRecord] = useState(false);
+  const [recordPhotos, setRecordPhotos] = useState([]);
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
 
   useEffect(() => { loadData(); }, [activeTab]);
 
@@ -70,6 +72,17 @@ export default function TherapistDashboard() {
     if (!selectedOrder || submittingRecord) return;
     setSubmittingRecord(true);
     try {
+      // Upload photos first if any
+      let photoUrls = [];
+      if (recordPhotos.length > 0) {
+        try {
+          const uploadRes = await uploadAPI.uploadMultiple(recordPhotos);
+          photoUrls = uploadRes.data?.urls || [];
+        } catch (uploadErr) {
+          console.warn('Photo upload failed, continuing without photos:', uploadErr);
+        }
+      }
+
       try {
         await recordAPI.create({
           order_id: selectedOrder.id,
@@ -78,17 +91,19 @@ export default function TherapistDashboard() {
           chief_complaint: recordForm.chief_complaint,
           diagnosis: recordForm.diagnosis,
           actions_taken: recordForm.actions_taken,
-          session_number: 1
+          session_number: 1,
+          photo_urls: photoUrls.length > 0 ? photoUrls : undefined,
         });
       } catch (createErr) {
         if (!createErr.message.includes('already exists')) {
           throw createErr;
         }
-        // If it already exists, just proceed to mark as done
       }
       await orderAPI.updateStatus(selectedOrder.id, 'done');
       setSelectedOrder(null);
       setRecordForm({ chief_complaint: '', diagnosis: '', actions_taken: '' });
+      setRecordPhotos([]);
+      setPhotoPreviewUrls([]);
       loadData();
       alert('Sesi berhasil diselesaikan dan Rekam Medis tersimpan!');
     } catch (err) { alert(err.message); }
@@ -299,6 +314,27 @@ export default function TherapistDashboard() {
               onChange={e => setRecordForm({...recordForm, actions_taken: e.target.value})}
               placeholder="Contoh: 1. TENS 15 menit&#10;2. Ultrasound 5 menit"
             />
+          </div>
+          <div className="form-group" style={{ marginBottom: '12px' }}>
+            <label>📸 Foto Dokumentasi (Opsional, maks 5)</label>
+            <input 
+              type="file" 
+              accept="image/*"
+              multiple
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []).slice(0, 5);
+                setRecordPhotos(files);
+                setPhotoPreviewUrls(files.map(f => URL.createObjectURL(f)));
+              }}
+              style={{ marginTop: '6px' }}
+            />
+            {photoPreviewUrls.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                {photoPreviewUrls.map((url, i) => (
+                  <img key={i} src={url} alt={`preview-${i}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                ))}
+              </div>
+            )}
           </div>
           <div className="modal-actions">
             <button type="button" className="btn btn--danger" onClick={() => setSelectedOrder(null)} disabled={submittingRecord}>Batal</button>

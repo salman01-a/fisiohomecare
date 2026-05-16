@@ -89,6 +89,42 @@ class OrderCard extends StatelessWidget {
                   ],
                 ),
               ],
+              // Therapy Record badge + Rating stars
+              if (order.status == 'done') ...[
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (order.therapyRecord != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.medical_information_outlined, size: 14, color: AppColors.success),
+                            SizedBox(width: 4),
+                            Text('Rekam Terapi', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.success)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (order.rating != null)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ...List.generate(order.rating!, (i) => const Icon(Icons.star_rounded, size: 16, color: AppColors.warning)),
+                          ...List.generate(5 - order.rating!, (i) => const Icon(Icons.star_border_rounded, size: 16, color: AppColors.textMuted)),
+                        ],
+                      ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

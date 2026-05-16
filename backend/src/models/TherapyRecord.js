@@ -60,6 +60,17 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
+    photo_urls: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      get() {
+        const raw = this.getDataValue('photo_urls');
+        return raw ? JSON.parse(raw) : [];
+      },
+      set(val) {
+        this.setDataValue('photo_urls', val ? JSON.stringify(val) : null);
+      },
+    },
   }, {
     tableName: 'therapy_records',
     timestamps: true,

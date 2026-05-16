@@ -1,4 +1,4 @@
-const { Order, Patient, Therapist, Schedule, User, Payment, sequelize } = require('../models');
+const { Order, Patient, Therapist, Schedule, User, Payment, TherapyRecord, Service, sequelize } = require('../models');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 const { Op } = require('sequelize');
@@ -51,6 +51,7 @@ const getAllOrders = async (req, res, next) => {
         { association: 'schedule' },
         { association: 'payment' },
         { association: 'service' },
+        { association: 'therapyRecord' },
       ],
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -279,10 +280,76 @@ const cancelOrder = async (req, res, next) => {
   }
 };
 
+/**
+ * Rate an order (Patient only, after done)
+ * POST /orders/:id/rate
+ */
+const rateOrder = async (req, res, next) => {
+  try {
+    const { rating, comment } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      throw ApiError.badRequest('Rating must be between 1 and 5');
+    }
+
+    const order = await Order.findByPk(req.params.id);
+    if (!order) {
+      throw ApiError.notFound('Order not found');
+    }
+
+    // Must be patient's own order
+    const patient = await Patient.findOne({ where: { user_id: req.user.id } });
+    if (!patient || order.patient_id !== patient.id) {
+      throw ApiError.forbidden('You can only rate your own orders');
+    }
+
+    if (order.status !== 'done') {
+      throw ApiError.badRequest('Can only rate completed orders');
+    }
+
+    if (order.rating !== null) {
+      throw ApiError.badRequest('Order has already been rated');
+    }
+
+    // Save rating to order
+    await order.update({
+      rating: parseInt(rating),
+      rating_comment: comment || null,
+    });
+
+    // Recalculate therapist average rating
+    const avgResult = await Order.findOne({
+      where: {
+        therapist_id: order.therapist_id,
+        rating: { [Op.not]: null },
+      },
+      attributes: [
+        [sequelize.fn('AVG', sequelize.col('rating')), 'avg_rating'],
+      ],
+      raw: true,
+    });
+
+    const avgRating = parseFloat(avgResult.avg_rating) || 0;
+    await Therapist.update(
+      { rating: Math.round(avgRating * 100) / 100 },
+      { where: { id: order.therapist_id } }
+    );
+
+    return ApiResponse.success(res, {
+      rating: order.rating,
+      rating_comment: order.rating_comment,
+      therapist_avg_rating: avgRating,
+    }, 'Rating submitted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllOrders,
   createOrder,
   getOrderById,
   updateOrderStatus,
   cancelOrder,
+  rateOrder,
 };

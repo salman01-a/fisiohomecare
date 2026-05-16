@@ -65,4 +65,15 @@ class OrderService {
   Future<void> delete(String id) async {
     await _dio.delete(ApiConfig.orderById(id));
   }
+
+  /// Rate a completed order (patient only)
+  Future<void> rateOrder(String orderId, int rating, {String? comment}) async {
+    await _dio.post(
+      ApiConfig.orderRate(orderId),
+      data: {
+        'rating': rating,
+        if (comment != null && comment.isNotEmpty) 'comment': comment,
+      },
+    );
+  }
 }

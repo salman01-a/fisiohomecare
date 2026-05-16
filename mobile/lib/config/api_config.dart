@@ -32,6 +32,7 @@ class ApiConfig {
   static const String orders = '/orders';
   static String orderById(String id) => '/orders/$id';
   static String orderStatus(String id) => '/orders/$id/status';
+  static String orderRate(String id) => '/orders/$id/rate';
 
   // Payments
   static const String paymentInitiate = '/payments/initiate';

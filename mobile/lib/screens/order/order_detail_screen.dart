@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/order_provider.dart';
 import '../../services/nosql_service.dart';
+import '../../services/order_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../utils/routes.dart';
@@ -17,8 +18,12 @@ class OrderDetailScreen extends StatefulWidget {
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final NosqlService _nosqlService = NosqlService();
+  final OrderService _orderService = OrderService();
   Map<String, dynamic>? _tracking;
   bool _trackingLoading = false;
+  int _selectedRating = 0;
+  final TextEditingController _commentController = TextEditingController();
+  bool _submittingRating = false;
 
   @override
   void initState() {
@@ -158,6 +163,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       ),
                     ),
                   ),
+
+                const SizedBox(height: 16),
+
+                // === Rating Section ===
+                if (o.status == 'done') _buildRatingSection(o, op),
 
                 const SizedBox(height: 16),
 
@@ -347,5 +357,113 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ],
       ),
     );
+  }
+
+  /// Section rating terapis
+  Widget _buildRatingSection(dynamic o, OrderProvider op) {
+    // Sudah pernah rating
+    if (o.rating != null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Rating Anda', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 12),
+              Row(
+                children: List.generate(5, (i) => Icon(
+                  i < o.rating ? Icons.star_rounded : Icons.star_border_rounded,
+                  color: AppColors.warning,
+                  size: 32,
+                )),
+              ),
+              if (o.ratingComment != null && o.ratingComment!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(o.ratingComment!, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Belum rating — form interaktif
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Beri Rating', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            const Text('Bagaimana pengalaman terapi Anda?', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            const SizedBox(height: 14),
+            // Star row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (i) => GestureDetector(
+                onTap: () => setState(() => _selectedRating = i + 1),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(
+                    i < _selectedRating ? Icons.star_rounded : Icons.star_border_rounded,
+                    color: AppColors.warning,
+                    size: 40,
+                  ),
+                ),
+              )),
+            ),
+            const SizedBox(height: 14),
+            // Comment field
+            TextField(
+              controller: _commentController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'Komentar (opsional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: CustomButton(
+                text: _submittingRating ? 'Mengirim...' : 'Kirim Rating',
+                icon: Icons.send_rounded,
+                onPressed: _selectedRating == 0 || _submittingRating
+                    ? null
+                    : () => _submitRating(o.id, op),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitRating(String orderId, OrderProvider op) async {
+    setState(() => _submittingRating = true);
+    try {
+      await _orderService.rateOrder(
+        orderId,
+        _selectedRating,
+        comment: _commentController.text.trim(),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Rating berhasil dikirim! Terima kasih 🎉'), backgroundColor: AppColors.success),
+        );
+        // Refresh order detail
+        op.fetchOrderDetail(orderId);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengirim rating: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submittingRating = false);
+    }
   }
 }

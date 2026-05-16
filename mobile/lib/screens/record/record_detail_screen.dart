@@ -68,6 +68,10 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
                       if (_record!.diagnosis != null) _tile('Diagnosis', _record!.diagnosis!),
                       if (_record!.actionsTaken != null) _tile('Tindakan', _record!.actionsTaken!),
 
+                      // Foto dokumentasi dari terapis (SQL)
+                      if (_record!.photoUrls.isNotEmpty)
+                        _attachmentsSection(_record!.photoUrls, title: 'Foto Dokumentasi Terapis'),
+
                       // === NoSQL Data: Catatan Fleksibel, Progres, Foto ===
                       if (_record!.nosqlDetails != null) ...[
                         const SizedBox(height: 24),
@@ -214,8 +218,8 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
     );
   }
 
-  /// Grid foto/dokumen pendukung dari NoSQL
-  Widget _attachmentsSection(List<String> attachments) {
+  /// Grid foto/dokumen pendukung
+  Widget _attachmentsSection(List<String> attachments, {String title = 'Foto/Dokumen Pendukung'}) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -223,7 +227,7 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Foto/Dokumen Pendukung (${attachments.length})', style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+            Text('$title (${attachments.length})', style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),
             GridView.builder(
               shrinkWrap: true,
