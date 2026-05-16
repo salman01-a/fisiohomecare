@@ -9,6 +9,19 @@ const initiatePayment = async (req, res, next) => {
     const order = await Order.findByPk(order_id);
     if (!order) throw ApiError.notFound('Order not found');
 
+    // Security: only the patient who owns this order can initiate payment
+    if (req.user.role === 'patient') {
+      const patient = await Patient.findOne({ where: { user_id: req.user.id } });
+      if (!patient || order.patient_id !== patient.id) {
+        throw ApiError.forbidden('You can only pay for your own orders');
+      }
+    }
+
+    // Prevent payment for completed or cancelled orders
+    if (['done', 'cancelled'].includes(order.status)) {
+      throw ApiError.badRequest(`Cannot pay for an order with status '${order.status}'`);
+    }
+
     const existing = await Payment.findOne({ where: { order_id } });
     if (existing) throw ApiError.conflict('Payment already exists for this order');
 

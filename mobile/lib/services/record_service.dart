@@ -12,10 +12,18 @@ class RecordService {
     return TherapyRecord.fromJson(response.data['data']);
   }
 
-  /// Get all therapy records for a patient
+  /// Get all therapy records for a patient (by patient ID — for admin/therapist)
   Future<List<TherapyRecord>> getByPatientId(String patientId) async {
     final response = await _dio.get(ApiConfig.patientRecords(patientId));
     final List data = response.data['data'] ?? [];
     return data.map((json) => TherapyRecord.fromJson(json)).toList();
   }
+
+  /// Get my own therapy records (patient self-service — for mobile app)
+  Future<List<TherapyRecord>> getMyRecords() async {
+    final response = await _dio.get(ApiConfig.patientMyRecords);
+    final List data = response.data['data'] ?? [];
+    return data.map((json) => TherapyRecord.fromJson(json)).toList();
+  }
 }
+

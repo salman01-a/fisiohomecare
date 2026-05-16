@@ -41,9 +41,7 @@ class ProfileScreen extends StatelessWidget {
             // Menu items
             _menuItem(context, Icons.receipt_long_outlined, 'Pesanan Saya', () => Navigator.pushNamed(context, AppRoutes.orderList)),
             _menuItem(context, Icons.medical_information_outlined, 'Rekam Terapi', () {
-              // Navigate to records — needs patient ID
-              // For now show a message
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fitur segera hadir')));
+              Navigator.pushNamed(context, AppRoutes.recordList);
             }),
             _menuItem(context, Icons.info_outline, 'Tentang Aplikasi', () {
               showAboutDialog(

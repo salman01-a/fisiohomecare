@@ -2,6 +2,7 @@ const admin = require('firebase-admin');
 const path = require('path');
 
 let firebaseApp;
+let firestoreDb;
 
 const initializeFirebase = () => {
   if (firebaseApp) return firebaseApp;
@@ -21,13 +22,16 @@ const initializeFirebase = () => {
       });
     }
 
-    console.log('✅ Firebase Admin initialized');
+    firestoreDb = admin.firestore();
+    console.log('✅ Firebase Admin & Firestore initialized');
   } catch (error) {
     console.warn('⚠️  Firebase Admin initialization skipped:', error.message);
-    console.warn('   Auth middleware will use fallback JWT verification.');
+    console.warn('   NoSQL features (Firestore) will be disabled.');
   }
 
   return firebaseApp;
 };
 
-module.exports = { admin, initializeFirebase };
+const getFirestore = () => firestoreDb;
+
+module.exports = { admin, initializeFirebase, getFirestore };

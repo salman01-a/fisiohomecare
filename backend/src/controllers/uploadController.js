@@ -1,18 +1,36 @@
-const { Storage } = require('@google-cloud/storage');
 const path = require('path');
+const fs = require('fs');
 const ApiResponse = require('../utils/ApiResponse');
 const ApiError = require('../utils/ApiError');
 
-// Inisialisasi GCS Client
-const storage = new Storage({
-  keyFilename: path.resolve(process.env.FIREBASE_SERVICE_ACCOUNT || './firebase-service-account.json'),
-});
+// Lazy-initialize GCS client
+let bucket = null;
+let gcsAvailable = false;
 
-// Ganti dengan nama bucket Firebase Storage / GCS kamu
-// Secara default Firebase project bucket bernama: <project-id>.appspot.com
-// Contoh project kamu: homecare-2b018.appspot.com
-const bucketName = process.env.GCS_BUCKET_NAME || 'homecare-2b018.appspot.com';
-const bucket = storage.bucket(bucketName);
+const initGCS = () => {
+  if (bucket) return true;
+  try {
+    const { Storage } = require('@google-cloud/storage');
+    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT || './firebase-service-account.json';
+    const resolvedPath = path.resolve(serviceAccountPath);
+
+    if (!fs.existsSync(resolvedPath)) {
+      console.warn('⚠️  GCS: Service account file not found. Upload will use local storage fallback.');
+      return false;
+    }
+
+    const storage = new Storage({ keyFilename: resolvedPath });
+    const bucketName = process.env.GCS_BUCKET_NAME || 'homecare-2b018.appspot.com';
+    bucket = storage.bucket(bucketName);
+    gcsAvailable = true;
+    console.log(`✅ GCS initialized with bucket: ${bucketName}`);
+    return true;
+  } catch (error) {
+    console.warn('⚠️  GCS initialization failed:', error.message);
+    console.warn('   Uploads will use local storage fallback.');
+    return false;
+  }
+};
 
 /**
  * Upload satu file ke GCS
@@ -36,17 +54,14 @@ const uploadToGCS = (file, folder) => {
     });
 
     blobStream.on('finish', async () => {
-      // Buat file menjadi public
       try {
         await blob.makePublic();
-        const publicUrl = `https://storage.googleapis.com/${bucketName}/${gcsFileName}`;
-        resolve(publicUrl);
       } catch (err) {
-        // Jika gagal makePublic (biasanya karena Uniform Bucket-Level Access di GCP),
-        // fallback pakai URL public default
-        const publicUrl = `https://storage.googleapis.com/${bucketName}/${gcsFileName}`;
-        resolve(publicUrl);
+        // Ignore if makePublic fails (Uniform Bucket-Level Access)
       }
+      const bucketName = process.env.GCS_BUCKET_NAME || 'homecare-2b018.appspot.com';
+      const publicUrl = `https://storage.googleapis.com/${bucketName}/${gcsFileName}`;
+      resolve(publicUrl);
     });
 
     blobStream.end(file.buffer);
@@ -54,7 +69,29 @@ const uploadToGCS = (file, folder) => {
 };
 
 /**
- * Upload file handler
+ * Upload satu file ke local storage (fallback saat GCS tidak tersedia)
+ */
+const uploadToLocal = async (file, folder) => {
+  const uploadsDir = path.join(__dirname, '../../uploads', folder);
+  
+  // Buat folder jika belum ada
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+  const ext = path.extname(file.originalname);
+  const filename = `${uniqueSuffix}${ext}`;
+  const filePath = path.join(uploadsDir, filename);
+
+  fs.writeFileSync(filePath, file.buffer);
+
+  // Return relative URL that can be served by express.static
+  return `/uploads/${folder}/${filename}`;
+};
+
+/**
+ * Upload file handler (GCS with local fallback)
  */
 const uploadFile = async (req, res, next) => {
   try {
@@ -63,14 +100,21 @@ const uploadFile = async (req, res, next) => {
     }
 
     const type = req.uploadType || 'documents';
-    const publicUrl = await uploadToGCS(req.file, type);
+    let fileUrl;
+
+    // Try GCS first, fallback to local
+    if (initGCS() && gcsAvailable) {
+      fileUrl = await uploadToGCS(req.file, type);
+    } else {
+      fileUrl = await uploadToLocal(req.file, type);
+    }
 
     return ApiResponse.success(res, {
       filename: req.file.originalname,
       size: req.file.size,
       mimetype: req.file.mimetype,
-      url: publicUrl,
-    }, 'File uploaded successfully to GCS');
+      url: fileUrl,
+    }, 'File uploaded successfully');
   } catch (error) {
     next(error);
   }
@@ -86,21 +130,26 @@ const uploadMultipleFiles = async (req, res, next) => {
     }
 
     const type = req.uploadType || 'documents';
-    
-    // Gunakan Promise.all untuk upload concurrent
+    const useGCS = initGCS() && gcsAvailable;
+
     const uploadPromises = req.files.map(async (file) => {
-      const publicUrl = await uploadToGCS(file, type);
+      let fileUrl;
+      if (useGCS) {
+        fileUrl = await uploadToGCS(file, type);
+      } else {
+        fileUrl = await uploadToLocal(file, type);
+      }
       return {
         filename: file.originalname,
         size: file.size,
         mimetype: file.mimetype,
-        url: publicUrl,
+        url: fileUrl,
       };
     });
 
     const files = await Promise.all(uploadPromises);
 
-    return ApiResponse.success(res, { files }, 'Files uploaded successfully to GCS');
+    return ApiResponse.success(res, { files, urls: files.map(f => f.url) }, 'Files uploaded successfully');
   } catch (error) {
     next(error);
   }

@@ -1,10 +1,15 @@
 const { TherapyRecord, Order, Therapist, Patient } = require('../models');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
+const FirestoreService = require('../services/firestoreService');
 
 const createRecord = async (req, res, next) => {
   try {
-    const { order_id, chief_complaint, diagnosis, actions_taken, session_number, check_in_at, check_out_at } = req.body;
+    const { 
+      order_id, chief_complaint, diagnosis, actions_taken, session_number, check_in_at, check_out_at,
+      // NoSQL Fields:
+      flexible_notes, progress_rating, attachments 
+    } = req.body;
 
     const therapist = await Therapist.findOne({ where: { user_id: req.user.id } });
     if (!therapist) throw ApiError.forbidden('Only therapists can create records');
@@ -16,13 +21,34 @@ const createRecord = async (req, res, next) => {
     const existing = await TherapyRecord.findOne({ where: { order_id } });
     if (existing) throw ApiError.conflict('Record already exists for this order');
 
+    // 1. Simpan Rekam Terapi Utama ke SQL
     const record = await TherapyRecord.create({
       order_id, therapist_id: therapist.id, patient_id: order.patient_id,
       chief_complaint, diagnosis, actions_taken, session_number: session_number || 1,
       check_in_at, check_out_at,
     });
 
-    return ApiResponse.created(res, record, 'Therapy record created');
+    // 2. Simpan Catatan Fleksibel, Progress, Foto ke NoSQL (Firestore)
+    if (flexible_notes || progress_rating || attachments) {
+      await FirestoreService.saveTherapyNote(record.id, {
+        order_id,
+        patient_id: order.patient_id,
+        therapist_id: therapist.id,
+        flexible_notes: flexible_notes || '',
+        progress_rating: progress_rating || 0,
+        attachments: attachments || [],
+      });
+    }
+
+    // 3. Kirim Notifikasi ke NoSQL (Firestore)
+    await FirestoreService.sendPatientNotification(
+      order.patient_id,
+      'Rekam Terapi Selesai',
+      `Sesi terapi ${session_number || 1} telah selesai. Rekam medis telah diupdate.`,
+      'success'
+    );
+
+    return ApiResponse.created(res, record, 'Therapy record created (SQL & NoSQL synced)');
   } catch (error) { next(error); }
 };
 
@@ -36,7 +62,17 @@ const getRecordById = async (req, res, next) => {
       ],
     });
     if (!record) throw ApiError.notFound('Record not found');
-    return ApiResponse.success(res, record);
+
+    // Ambil detail NoSQL (catatan fleksibel)
+    const nosqlData = await FirestoreService.getTherapyNote(record.id);
+
+    // Gabungkan data SQL dan NoSQL
+    const responseData = {
+      ...record.toJSON(),
+      nosql_details: nosqlData || null,
+    };
+
+    return ApiResponse.success(res, responseData);
   } catch (error) { next(error); }
 };
 

@@ -16,17 +16,36 @@ class _RecordListScreenState extends State<RecordListScreen> {
   final RecordService _service = RecordService();
   List<TherapyRecord> _records = [];
   bool _isLoading = true;
+  bool _hasLoaded = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final patientId = ModalRoute.of(context)!.settings.arguments as String;
-    _loadRecords(patientId);
+    if (!_hasLoaded) {
+      _hasLoaded = true;
+      // Check if a patientId was passed (from admin/therapist view)
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is String && args.isNotEmpty) {
+        _loadByPatientId(args);
+      } else {
+        // Patient viewing their own records (mobile self-service)
+        _loadMyRecords();
+      }
+    }
   }
 
-  Future<void> _loadRecords(String patientId) async {
+  Future<void> _loadByPatientId(String patientId) async {
     try {
       final records = await _service.getByPatientId(patientId);
+      if (mounted) setState(() { _records = records; _isLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadMyRecords() async {
+    try {
+      final records = await _service.getMyRecords();
       if (mounted) setState(() { _records = records; _isLoading = false; });
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);

@@ -15,6 +15,11 @@ class ApiConfig {
   static const String register = '/auth/register';
   static const String me = '/auth/me';
 
+  // Patient (self-service for mobile)
+  static const String patientMe = '/patients/me';
+  static const String patientMyOrders = '/patients/me/orders';
+  static const String patientMyRecords = '/patients/me/records';
+
   // Therapists
   static const String therapists = '/therapists';
   static String therapistById(String id) => '/therapists/$id';

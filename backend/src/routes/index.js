@@ -19,5 +19,6 @@ router.use('/payments', paymentRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/services', serviceRoutes);
+router.use('/nosql', require('./nosqlRoutes'));
 
 module.exports = router;
