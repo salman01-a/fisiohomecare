@@ -101,7 +101,11 @@ class _HomeTabState extends State<_HomeTab> {
                   Container(
                     width: 48, height: 48,
                     decoration: BoxDecoration(color: AppColors.primaryLight.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(14)),
-                    child: const Icon(Icons.person, color: AppColors.primary),
+                    child: IconButton(
+                      icon: const Icon(Icons.notifications_outlined, color: AppColors.primary),
+                      onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
+                      tooltip: 'Notifikasi',
+                    ),
                   ),
                 ],
               ),

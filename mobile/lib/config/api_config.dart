@@ -6,7 +6,7 @@ class ApiConfig {
   static String get baseUrl {
     // Both physical devices and emulators on the same network can access the host machine's IP
     // Local IP address of the host machine
-    return 'http://192.168.1.7:3000/v1';
+    return 'http://192.168.1.14:3000/v1';
   }
 
   // Auth
@@ -49,4 +49,12 @@ class ApiConfig {
   static const String uploadPhoto = '/upload/photo';
   static const String uploadDocument = '/upload/document';
   static const String uploadPhotos = '/upload/photos';
+
+  // NoSQL (Firestore) — Visit Tracking
+  static String visitTracking(String orderId) => '/nosql/tracking/$orderId';
+
+  // NoSQL (Firestore) — Patient Notifications
+  static const String notifications = '/nosql/notifications';
+  static String markNotificationRead(String notifId) =>
+      '/nosql/notifications/$notifId/read';
 }

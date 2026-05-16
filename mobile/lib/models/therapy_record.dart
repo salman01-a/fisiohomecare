@@ -1,3 +1,5 @@
+/// Model TherapyRecord — data SQL (rekam terapi utama)
+/// + data NoSQL (catatan fleksibel, progres pemulihan, foto/dokumen pendukung)
 class TherapyRecord {
   final String id;
   final String orderId;
@@ -11,6 +13,9 @@ class TherapyRecord {
   final DateTime? checkOutAt;
   final DateTime? createdAt;
 
+  // --- NoSQL fields (dari Firestore via backend) ---
+  final NosqlDetails? nosqlDetails;
+
   TherapyRecord({
     required this.id,
     required this.orderId,
@@ -23,6 +28,7 @@ class TherapyRecord {
     this.checkInAt,
     this.checkOutAt,
     this.createdAt,
+    this.nosqlDetails,
   });
 
   factory TherapyRecord.fromJson(Map<String, dynamic> json) {
@@ -47,6 +53,9 @@ class TherapyRecord {
           json['created_at'] != null
               ? DateTime.parse(json['created_at'])
               : null,
+      nosqlDetails: json['nosql_details'] != null
+          ? NosqlDetails.fromJson(json['nosql_details'])
+          : null,
     );
   }
 
@@ -60,5 +69,32 @@ class TherapyRecord {
       'actions_taken': actionsTaken,
       'session_number': sessionNumber,
     };
+  }
+}
+
+/// Data NoSQL dari Firestore — catatan terapi fleksibel
+class NosqlDetails {
+  final String? flexibleNotes;
+  final num? progressRating;
+  final List<String> attachments;
+
+  NosqlDetails({
+    this.flexibleNotes,
+    this.progressRating,
+    this.attachments = const [],
+  });
+
+  factory NosqlDetails.fromJson(Map<String, dynamic> json) {
+    List<String> parseAttachments(dynamic data) {
+      if (data == null) return [];
+      if (data is List) return data.map((e) => e.toString()).toList();
+      return [];
+    }
+
+    return NosqlDetails(
+      flexibleNotes: json['flexible_notes'],
+      progressRating: json['progress_rating'],
+      attachments: parseAttachments(json['attachments']),
+    );
   }
 }

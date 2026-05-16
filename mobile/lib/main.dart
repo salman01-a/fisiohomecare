@@ -21,6 +21,7 @@ import 'screens/payment/payment_screen.dart';
 import 'screens/record/record_list_screen.dart';
 import 'screens/record/record_detail_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/notification/notification_screen.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -61,6 +62,7 @@ class FisioHomecareApp extends StatelessWidget {
           AppRoutes.recordList: (_) => const RecordListScreen(),
           AppRoutes.recordDetail: (_) => const RecordDetailScreen(),
           AppRoutes.profile: (_) => const ProfileScreen(),
+          AppRoutes.notifications: (_) => const NotificationScreen(),
         },
       ),
     );
