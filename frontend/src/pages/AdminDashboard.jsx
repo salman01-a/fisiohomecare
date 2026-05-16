@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { dashboardAPI, therapistAPI, serviceAPI, orderAPI, paymentAPI } from '../services/api';
+import { dashboardAPI, therapistAPI, serviceAPI, orderAPI, paymentAPI, nosqlAPI } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import StatCard from '../components/StatCard';
@@ -26,6 +26,8 @@ export default function AdminDashboard() {
 
   // Order Detail Modal State
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [orderTracking, setOrderTracking] = useState(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
 
   // Therapist Schedule Modal State
   const [selectedTherapist, setSelectedTherapist] = useState(null);
@@ -138,6 +140,17 @@ export default function AdminDashboard() {
     try {
       const res = await orderAPI.getById(id);
       setSelectedOrder(res.data);
+      // Fetch NoSQL tracking in parallel
+      setOrderTracking(null);
+      setTrackingLoading(true);
+      try {
+        const trackRes = await nosqlAPI.getTracking(id);
+        setOrderTracking(trackRes.data);
+      } catch (_) {
+        setOrderTracking(null);
+      } finally {
+        setTrackingLoading(false);
+      }
     } catch (err) { alert(err.message); }
   };
 
@@ -437,7 +450,7 @@ export default function AdminDashboard() {
       {/* Order Detail Modal */}
       <Modal
         isOpen={!!selectedOrder}
-        onClose={() => setSelectedOrder(null)}
+        onClose={() => { setSelectedOrder(null); setOrderTracking(null); }}
         title={`Detail Pesanan #${selectedOrder?.id || ''}`}
       >
         {selectedOrder && (
@@ -462,6 +475,50 @@ export default function AdminDashboard() {
               <div className="info-row"><span>Status</span><StatusBadge status={selectedOrder.status} /></div>
               {selectedOrder.notes && <div className="info-row"><span>Catatan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{selectedOrder.notes}</span></div>}
             </div>
+
+            {/* NoSQL Visit Tracking Panel */}
+            <div className="section-card" style={{ margin: 0, borderLeft: '3px solid #f59e0b' }}>
+              <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                🔥 Tracking Kunjungan <span style={{ fontSize: 10, background: '#fef3c7', color: '#d97706', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>NoSQL</span>
+              </h3>
+              {trackingLoading ? (
+                <p style={{ color: '#94a3b8', fontSize: 13 }}>Memuat data Firestore...</p>
+              ) : !orderTracking ? (
+                <p style={{ color: '#94a3b8', fontSize: 13 }}>Belum ada data tracking. Tracking otomatis tersimpan saat status order berubah.</p>
+              ) : (
+                <div>
+                  <div className="info-row">
+                    <span>Status Saat Ini</span>
+                    <span style={{ fontWeight: 700, textTransform: 'capitalize', color: '#6366f1' }}>
+                      {orderTracking.current_status === 'otw' ? '🚗 Dalam Perjalanan'
+                        : orderTracking.current_status === 'ongoing' ? '▶️ Berlangsung'
+                        : orderTracking.current_status === 'done' ? '✅ Selesai'
+                        : orderTracking.current_status === 'confirmed' ? '✅ Dikonfirmasi'
+                        : orderTracking.current_status === 'cancelled' ? '❌ Dibatalkan'
+                        : orderTracking.current_status || '-'}
+                    </span>
+                  </div>
+                  {orderTracking.history?.length > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 8 }}>Riwayat Tracking:</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {[...orderTracking.history].reverse().map((h, i) => (
+                          <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 12 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: i === 0 ? '#6366f1' : '#cbd5e1', flexShrink: 0, marginTop: 4 }} />
+                            <div>
+                              <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{h.status}</span>
+                              {h.notes && <span style={{ color: '#64748b' }}> — {h.notes}</span>}
+                              {h.timestamp && <div style={{ color: '#94a3b8', fontSize: 11 }}>{formatDate(h.timestamp)}</div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {selectedOrder.payment && (
               <div className="section-card" style={{ margin: 0 }}>
                 <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#64748b' }}>💳 Pembayaran</h3>

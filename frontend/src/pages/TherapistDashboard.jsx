@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { orderAPI, therapistAPI, recordAPI, uploadAPI } from '../services/api';
+import { orderAPI, therapistAPI, recordAPI, uploadAPI, nosqlAPI } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import StatusBadge from '../components/StatusBadge';
@@ -20,6 +20,7 @@ export default function TherapistDashboard() {
   // Therapy Record Modal State
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [recordForm, setRecordForm] = useState({ chief_complaint: '', diagnosis: '', actions_taken: '' });
+  const [nosqlForm, setNosqlForm] = useState({ flexible_notes: '', progress_rating: 5, attachments: [] });
   const [submittingRecord, setSubmittingRecord] = useState(false);
   const [recordPhotos, setRecordPhotos] = useState([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
@@ -67,12 +68,20 @@ export default function TherapistDashboard() {
     } catch (err) { alert(err.message); }
   };
 
+  const handleTrackingUpdate = async (orderId, trackingStatus, notes) => {
+    try {
+      await nosqlAPI.updateTracking(orderId, trackingStatus, notes);
+    } catch (err) {
+      console.warn('[NoSQL] Tracking update failed:', err.message);
+    }
+  };
+
   const submitTherapyRecord = async (e) => {
     e.preventDefault();
     if (!selectedOrder || submittingRecord) return;
     setSubmittingRecord(true);
     try {
-      // Upload photos first if any
+      // 1. Upload photos/attachments if any
       let photoUrls = [];
       if (recordPhotos.length > 0) {
         try {
@@ -83,6 +92,7 @@ export default function TherapistDashboard() {
         }
       }
 
+      // 2. Create SQL therapy record + NoSQL therapy note (via backend)
       try {
         await recordAPI.create({
           order_id: selectedOrder.id,
@@ -93,19 +103,28 @@ export default function TherapistDashboard() {
           actions_taken: recordForm.actions_taken,
           session_number: 1,
           photo_urls: photoUrls.length > 0 ? photoUrls : undefined,
+          // NoSQL fields — saved to Firestore by backend recordController
+          flexible_notes: nosqlForm.flexible_notes || undefined,
+          progress_rating: nosqlForm.progress_rating || undefined,
+          attachments: photoUrls.length > 0 ? photoUrls : undefined,
         });
       } catch (createErr) {
         if (!createErr.message.includes('already exists')) {
           throw createErr;
         }
       }
+
+      // 3. Update order status to done (also auto-logs tracking to Firestore)
       await orderAPI.updateStatus(selectedOrder.id, 'done');
+
+      // Reset
       setSelectedOrder(null);
       setRecordForm({ chief_complaint: '', diagnosis: '', actions_taken: '' });
+      setNosqlForm({ flexible_notes: '', progress_rating: 5, attachments: [] });
       setRecordPhotos([]);
       setPhotoPreviewUrls([]);
       loadData();
-      alert('Sesi berhasil diselesaikan dan Rekam Medis tersimpan!');
+      alert('Sesi berhasil diselesaikan, Rekam Medis & data NoSQL tersimpan!');
     } catch (err) { alert(err.message); }
     finally { setSubmittingRecord(false); }
   };
@@ -285,6 +304,8 @@ export default function TherapistDashboard() {
         title="Isi Rekam Medis"
       >
         <form onSubmit={submitTherapyRecord}>
+          {/* ── SQL Fields ── */}
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>📋 Data Utama (SQL)</p>
           <div className="form-group" style={{ marginBottom: '12px' }}>
             <label>Keluhan Utama</label>
             <textarea 
@@ -315,6 +336,31 @@ export default function TherapistDashboard() {
               placeholder="Contoh: 1. TENS 15 menit&#10;2. Ultrasound 5 menit"
             />
           </div>
+
+          {/* ── NoSQL Fields (Firestore) ── */}
+          <div style={{ borderTop: '1px solid #e2e8f0', margin: '16px 0 12px' }} />
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>🔥 Data Fleksibel (NoSQL / Firestore)</p>
+          <div className="form-group" style={{ marginBottom: '12px' }}>
+            <label>Catatan Tambahan</label>
+            <textarea
+              rows="3"
+              value={nosqlForm.flexible_notes}
+              onChange={e => setNosqlForm({...nosqlForm, flexible_notes: e.target.value})}
+              placeholder="Catatan perkembangan, observasi klinis, rekomendasi latihan..."
+            />
+          </div>
+          <div className="form-group" style={{ marginBottom: '12px' }}>
+            <label>Progres Pemulihan: <strong>{nosqlForm.progress_rating}/10</strong></label>
+            <input
+              type="range" min="1" max="10" step="1"
+              value={nosqlForm.progress_rating}
+              onChange={e => setNosqlForm({...nosqlForm, progress_rating: parseInt(e.target.value)})}
+              style={{ width: '100%', accentColor: '#6366f1' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8' }}>
+              <span>Awal Pemulihan</span><span>Sangat Baik</span>
+            </div>
+          </div>
           <div className="form-group" style={{ marginBottom: '12px' }}>
             <label>📸 Foto Dokumentasi (Opsional, maks 5)</label>
             <input 
@@ -336,10 +382,11 @@ export default function TherapistDashboard() {
               </div>
             )}
           </div>
+
           <div className="modal-actions">
             <button type="button" className="btn btn--danger" onClick={() => setSelectedOrder(null)} disabled={submittingRecord}>Batal</button>
             <button type="submit" className="btn btn--primary" disabled={submittingRecord}>
-              {submittingRecord ? 'Menyimpan...' : 'Simpan & Selesai'}
+              {submittingRecord ? 'Menyimpan...' : '💾 Simpan & Selesai'}
             </button>
           </div>
         </form>

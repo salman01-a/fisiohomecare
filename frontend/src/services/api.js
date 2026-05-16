@@ -195,3 +195,20 @@ export const uploadAPI = {
     });
   },
 };
+
+// NoSQL (Firestore)
+export const nosqlAPI = {
+  // Visit Tracking
+  getTracking: (orderId) => request(`/nosql/tracking/${orderId}`),
+  updateTracking: (orderId, status, notes = '') =>
+    request(`/nosql/tracking/${orderId}`, {
+      method: 'POST',
+      body: JSON.stringify({ status, notes }),
+    }),
+
+  // Patient Notifications
+  getNotifications: () => request('/nosql/notifications'),
+  markAsRead: (notifId) =>
+    request(`/nosql/notifications/${notifId}/read`, { method: 'PUT' }),
+};
+

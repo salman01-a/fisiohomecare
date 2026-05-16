@@ -210,7 +210,9 @@ const updateOrderStatus = async (req, res, next) => {
       throw ApiError.badRequest(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
     }
 
-    const order = await Order.findByPk(req.params.id);
+    const order = await Order.findByPk(req.params.id, {
+      include: [{ association: 'patient' }],
+    });
     if (!order) {
       throw ApiError.notFound('Order not found');
     }
@@ -241,11 +243,49 @@ const updateOrderStatus = async (req, res, next) => {
       );
     }
 
+    // === NoSQL: Auto-sync visit tracking & notification to Firestore ===
+    try {
+      const FirestoreService = require('../services/firestoreService');
+
+      // Map order status to tracking status
+      const trackingStatusMap = {
+        confirmed: { status: 'confirmed', notes: 'Pesanan dikonfirmasi oleh admin.' },
+        otw:       { status: 'otw',       notes: 'Terapis sedang dalam perjalanan menuju lokasi Anda.' },
+        ongoing:   { status: 'ongoing',   notes: 'Sesi terapi sedang berlangsung.' },
+        done:      { status: 'done',      notes: 'Sesi terapi telah selesai.' },
+        cancelled: { status: 'cancelled', notes: 'Pesanan dibatalkan.' },
+      };
+
+      const notificationMap = {
+        confirmed: { title: '✅ Pesanan Dikonfirmasi',    message: 'Pesanan Anda telah dikonfirmasi. Terapis akan segera menghubungi Anda.' },
+        otw:       { title: '🚗 Terapis Dalam Perjalanan', message: 'Terapis sedang dalam perjalanan menuju lokasi Anda. Harap bersiap.' },
+        ongoing:   { title: '▶️ Sesi Terapi Dimulai',     message: 'Sesi fisioterapi Anda sedang berlangsung.' },
+        done:      { title: '🎉 Sesi Terapi Selesai',     message: 'Sesi fisioterapi Anda telah selesai. Jangan lupa beri rating!' },
+        cancelled: { title: '❌ Pesanan Dibatalkan',       message: 'Pesanan Anda telah dibatalkan.' },
+      };
+
+      if (trackingStatusMap[status]) {
+        const { status: tStatus, notes: tNotes } = trackingStatusMap[status];
+        await FirestoreService.logVisitTracking(order.id, tStatus, {}, tNotes);
+      }
+
+      if (notificationMap[status] && order.patient_id) {
+        const { title, message } = notificationMap[status];
+        const type = status === 'cancelled' ? 'error' : status === 'done' ? 'success' : 'info';
+        await FirestoreService.sendPatientNotification(order.patient_id, title, message, type);
+      }
+    } catch (firestoreErr) {
+      // Firestore errors should not block the main response
+      console.warn('[Firestore] Failed to sync tracking/notification:', firestoreErr.message);
+    }
+    // =================================================================
+
     return ApiResponse.success(res, order, `Order status updated to '${status}'`);
   } catch (error) {
     next(error);
   }
 };
+
 
 /**
  * Cancel order
