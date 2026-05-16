@@ -16,13 +16,11 @@ class _RecordListScreenState extends State<RecordListScreen> {
   final RecordService _service = RecordService();
   List<TherapyRecord> _records = [];
   bool _isLoading = true;
-  bool _hasLoaded = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_hasLoaded) {
-      _hasLoaded = true;
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       // Check if a patientId was passed (from admin/therapist view)
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is String && args.isNotEmpty) {
@@ -31,7 +29,7 @@ class _RecordListScreenState extends State<RecordListScreen> {
         // Patient viewing their own records (mobile self-service)
         _loadMyRecords();
       }
-    }
+    });
   }
 
   Future<void> _loadByPatientId(String patientId) async {

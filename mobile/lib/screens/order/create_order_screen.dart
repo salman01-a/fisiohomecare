@@ -22,16 +22,22 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   final _addressCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   Service? _selectedService;
-  late Therapist _therapist;
-  late Schedule _schedule;
+  Therapist? _therapist;
+  Schedule? _schedule;
+  bool _argsLoaded = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    _therapist = args['therapist'] as Therapist;
-    _schedule = args['schedule'] as Schedule;
-    Provider.of<ServiceProvider>(context, listen: false).fetchServices();
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      setState(() {
+        _therapist = args['therapist'] as Therapist;
+        _schedule = args['schedule'] as Schedule;
+        _argsLoaded = true;
+      });
+      Provider.of<ServiceProvider>(context, listen: false).fetchServices();
+    });
   }
 
   @override
@@ -42,6 +48,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   }
 
   Future<void> _submit() async {
+    if (_therapist == null || _schedule == null) return;
     if (_addressCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Alamat wajib diisi'), backgroundColor: AppColors.error));
       return;
@@ -49,8 +56,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     final op = Provider.of<OrderProvider>(context, listen: false);
     try {
       await op.createOrder(
-        therapistId: _therapist.id,
-        scheduleId: _schedule.id,
+        therapistId: _therapist!.id,
+        scheduleId: _schedule!.id,
         serviceId: _selectedService?.id,
         serviceType: _selectedService?.name,
         address: _addressCtrl.text.trim(),
@@ -67,6 +74,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Guard: show loader until args are parsed after first frame
+    if (!_argsLoaded) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Buat Pesanan')),
       body: SingleChildScrollView(
@@ -83,9 +96,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   children: [
                     const Text('Ringkasan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 12),
-                    _summaryRow('Terapis', _therapist.displayName),
-                    _summaryRow('Tanggal', Helpers.formatDate(_schedule.date)),
-                    _summaryRow('Waktu', '${Helpers.formatTime(_schedule.startTime)} - ${Helpers.formatTime(_schedule.endTime)}'),
+                    _summaryRow('Terapis', _therapist!.displayName),
+                    _summaryRow('Tanggal', Helpers.formatDate(_schedule!.date)),
+                    _summaryRow('Waktu', '${Helpers.formatTime(_schedule!.startTime)} - ${Helpers.formatTime(_schedule!.endTime)}'),
                   ],
                 ),
               ),

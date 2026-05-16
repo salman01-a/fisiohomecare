@@ -21,11 +21,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   bool _trackingLoading = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final id = ModalRoute.of(context)!.settings.arguments as String;
-    Provider.of<OrderProvider>(context, listen: false).fetchOrderDetail(id);
-    _loadTracking(id);
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final id = ModalRoute.of(context)!.settings.arguments as String;
+      Provider.of<OrderProvider>(context, listen: false).fetchOrderDetail(id);
+      _loadTracking(id);
+    });
   }
 
   Future<void> _loadTracking(String orderId) async {

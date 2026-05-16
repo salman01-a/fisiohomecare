@@ -18,10 +18,12 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
   bool _isLoading = true;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final id = ModalRoute.of(context)!.settings.arguments as String;
-    _load(id);
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final id = ModalRoute.of(context)!.settings.arguments as String;
+      _load(id);
+    });
   }
 
   Future<void> _load(String id) async {

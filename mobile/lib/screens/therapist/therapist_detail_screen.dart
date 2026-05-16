@@ -14,12 +14,14 @@ class TherapistDetailScreen extends StatefulWidget {
 
 class _TherapistDetailScreenState extends State<TherapistDetailScreen> {
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final id = ModalRoute.of(context)!.settings.arguments as String;
-    final tp = Provider.of<TherapistProvider>(context, listen: false);
-    tp.fetchTherapistDetail(id);
-    tp.fetchSchedules(id);
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final id = ModalRoute.of(context)!.settings.arguments as String;
+      final tp = Provider.of<TherapistProvider>(context, listen: false);
+      tp.fetchTherapistDetail(id);
+      tp.fetchSchedules(id);
+    });
   }
 
   @override
@@ -28,9 +30,11 @@ class _TherapistDetailScreenState extends State<TherapistDetailScreen> {
       appBar: AppBar(title: const Text('Detail Terapis')),
       body: Consumer<TherapistProvider>(
         builder: (ctx, tp, _) {
-          if (tp.isLoading) return const LoadingIndicator(message: 'Memuat detail...');
+          if (tp.isLoading)
+            return const LoadingIndicator(message: 'Memuat detail...');
           final t = tp.selectedTherapist;
-          if (t == null) return const Center(child: Text('Terapis tidak ditemukan'));
+          if (t == null)
+            return const Center(child: Text('Terapis tidak ditemukan'));
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -42,28 +46,67 @@ class _TherapistDetailScreenState extends State<TherapistDetailScreen> {
                   child: Column(
                     children: [
                       Container(
-                        width: 90, height: 90,
+                        width: 90,
+                        height: 90,
                         decoration: BoxDecoration(
                           color: AppColors.primaryLight.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: t.photoUrl != null
-                            ? ClipRRect(borderRadius: BorderRadius.circular(24), child: Image.network(t.photoUrl!, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 40, color: AppColors.primary)))
-                            : const Icon(Icons.person, size: 40, color: AppColors.primary),
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(24),
+                                child: Image.network(
+                                  t.photoUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(
+                                        Icons.person,
+                                        size: 40,
+                                        color: AppColors.primary,
+                                      ),
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person,
+                                size: 40,
+                                color: AppColors.primary,
+                              ),
                       ),
                       const SizedBox(height: 14),
-                      Text(t.displayName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+                      Text(
+                        t.displayName,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       if (t.specialization != null) ...[
                         const SizedBox(height: 4),
-                        Text(t.specialization!, style: const TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+                        Text(
+                          t.specialization!,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                       ],
                       const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 20),
+                          const Icon(
+                            Icons.star_rounded,
+                            color: Color(0xFFFBBF24),
+                            size: 20,
+                          ),
                           const SizedBox(width: 4),
-                          Text(t.rating.toStringAsFixed(1), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                          Text(
+                            t.rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -73,33 +116,74 @@ class _TherapistDetailScreenState extends State<TherapistDetailScreen> {
 
                 // Info cards
                 _infoTile(Icons.badge_outlined, 'No. STR', t.licenseNumber),
-                if (t.user?.phone != null) _infoTile(Icons.phone_outlined, 'Telepon', t.user!.phone!),
-                if (t.user?.email != null) _infoTile(Icons.email_outlined, 'Email', t.user!.email),
+                if (t.user?.phone != null)
+                  _infoTile(Icons.phone_outlined, 'Telepon', t.user!.phone!),
+                if (t.user?.email != null)
+                  _infoTile(Icons.email_outlined, 'Email', t.user!.email),
                 const SizedBox(height: 24),
 
                 // Available schedules
-                const Text('Jadwal Tersedia', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                const Text(
+                  'Jadwal Tersedia',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 12),
                 if (tp.schedules.isEmpty)
-                  const Text('Tidak ada jadwal tersedia', style: TextStyle(color: AppColors.textMuted))
+                  const Text(
+                    'Tidak ada jadwal tersedia',
+                    style: TextStyle(color: AppColors.textMuted),
+                  )
                 else
-                  ...tp.schedules.map((s) => Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: Container(
-                        width: 42, height: 42,
-                        decoration: BoxDecoration(color: AppColors.primaryLight.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Icons.schedule, color: AppColors.primary, size: 20),
-                      ),
-                      title: Text(Helpers.formatDate(s.date), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                      subtitle: Text('${Helpers.formatTime(s.startTime)} - ${Helpers.formatTime(s.endTime)}', style: const TextStyle(fontSize: 13)),
-                      trailing: ElevatedButton(
-                        onPressed: () => Navigator.pushNamed(context, AppRoutes.createOrder, arguments: {'therapist': t, 'schedule': s}),
-                        style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
-                        child: const Text('Pesan', style: TextStyle(fontSize: 13)),
+                  ...tp.schedules.map(
+                    (s) => Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight.withValues(
+                              alpha: 0.15,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.schedule,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(
+                          Helpers.formatDate(s.date),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${Helpers.formatTime(s.startTime)} - ${Helpers.formatTime(s.endTime)}',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        trailing: ElevatedButton(
+                          onPressed: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.createOrder,
+                            arguments: {'therapist': t, 'schedule': s},
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                          ),
+                          child: const Text(
+                            'Pesan',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ),
                       ),
                     ),
-                  )),
+                  ),
               ],
             ),
           );
@@ -118,8 +202,20 @@ class _TherapistDetailScreenState extends State<TherapistDetailScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-              Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
         ],
