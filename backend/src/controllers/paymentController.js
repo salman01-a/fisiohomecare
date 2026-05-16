@@ -10,17 +10,49 @@ const streamPaymentProof = async (req, res, next) => {
       throw ApiError.notFound('Payment proof not found');
     }
 
-    // CATATAN PENTING: Untuk cara ini, pastikan 'proof_url' yang disimpan di database
-    // adalah PATH file di bucket (contoh: "payments/order_123.jpg"), 
-    // BUKAN URL publik lengkap yang berawalan "https://firebasestorage...".
-    const filePath = payment.proof_url; 
+    let fileUrl = payment.proof_url; 
+    
+    // Jika URL adalah URL lokal (dimulai dengan /uploads), kita bisa baca file lokal
+    if (fileUrl.startsWith('/uploads/')) {
+      const path = require('path');
+      const fs = require('fs');
+      // uploads folder ada di root backend/uploads
+      const localPath = path.join(__dirname, '../../', fileUrl);
+      if (!fs.existsSync(localPath)) {
+        throw ApiError.notFound('Local image file not found');
+      }
+      return res.sendFile(localPath);
+    }
     
     const bucket = getBucket();
     if (!bucket) {
       throw ApiError.internal('Firebase Storage is not configured');
     }
 
-    const file = bucket.file(filePath);
+    // Jika URL adalah URL publik dari Firebase Storage, ekstrak path-nya
+    if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+      try {
+        const urlObj = new URL(fileUrl);
+        const bucketName = process.env.GCS_BUCKET_NAME || 'homecare-2b018.appspot.com';
+        const prefix = `/${bucketName}/`;
+        if (urlObj.pathname.startsWith(prefix)) {
+          fileUrl = decodeURIComponent(urlObj.pathname.substring(prefix.length));
+        } else {
+          // Fallback parsing (e.g., if domain is firebasestorage.googleapis.com)
+          const parts = urlObj.pathname.split('/o/');
+          if (parts.length > 1) {
+            fileUrl = decodeURIComponent(parts[1].split('?')[0]);
+          } else {
+            // Assume the format is /bucket-name/folder/file.ext
+            fileUrl = decodeURIComponent(urlObj.pathname.split('/').slice(2).join('/'));
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse URL for streaming:', fileUrl);
+      }
+    }
+
+    const file = bucket.file(fileUrl);
 
     // Cek apakah file benar-benar ada di bucket
     const [exists] = await file.exists();
