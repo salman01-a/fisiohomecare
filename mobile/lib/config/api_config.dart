@@ -5,13 +5,18 @@ class ApiConfig {
   // iOS simulator can use localhost directly
   static String get baseUrl {
     // Using the host machine's actual local IP address
-    return 'http://192.168.0.103:3000/v1';
+    return 'http://172.20.10.3:3000/v1';
   }
 
   // Auth
   static const String login = '/auth/login';
   static const String register = '/auth/register';
   static const String me = '/auth/me';
+
+  // Patient (self-service for mobile)
+  static const String patientMe = '/patients/me';
+  static const String patientMyOrders = '/patients/me/orders';
+  static const String patientMyRecords = '/patients/me/records';
 
   // Therapists
   static const String therapists = '/therapists';

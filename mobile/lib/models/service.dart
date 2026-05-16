@@ -17,7 +17,7 @@ class Service {
 
   factory Service.fromJson(Map<String, dynamic> json) {
     return Service(
-      id: json['id'] ?? '',
+      id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       description: json['description'],
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,

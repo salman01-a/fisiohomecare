@@ -29,8 +29,8 @@ class Therapist {
 
   factory Therapist.fromJson(Map<String, dynamic> json) {
     return Therapist(
-      id: json['id'] ?? '',
-      userId: json['user_id'] ?? '',
+      id: json['id']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? '',
       licenseNumber: json['license_number'] ?? '',
       licenseDocUrl: json['license_doc_url'],
       photoUrl: json['photo_url'],

@@ -32,7 +32,12 @@ class ApiClient {
         onResponse: (response, handler) {
           return handler.next(response);
         },
-        onError: (error, handler) {
+        onError: (error, handler) async {
+          // Auto-logout when token expires
+          if (error.response?.statusCode == 401) {
+            await ApiClient.removeToken();
+            // Note: Navigation to login is handled by each screen's error handler
+          }
           // Extract error message from API response
           final message =
               error.response?.data?['message'] ?? 'Something went wrong';

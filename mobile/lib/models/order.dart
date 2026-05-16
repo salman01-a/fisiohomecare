@@ -54,11 +54,11 @@ class Order {
 
   factory Order.fromJson(Map<String, dynamic> json) {
     return Order(
-      id: json['id'] ?? '',
-      patientId: json['patient_id'] ?? '',
-      therapistId: json['therapist_id'] ?? '',
-      scheduleId: json['schedule_id'] ?? '',
-      serviceId: json['service_id'],
+      id: json['id']?.toString() ?? '',
+      patientId: json['patient_id']?.toString() ?? '',
+      therapistId: json['therapist_id']?.toString() ?? '',
+      scheduleId: json['schedule_id']?.toString() ?? '',
+      serviceId: json['service_id']?.toString(),
       serviceType: json['service_type'],
       address: json['address'] ?? '',
       lat: double.tryParse(json['lat']?.toString() ?? ''),

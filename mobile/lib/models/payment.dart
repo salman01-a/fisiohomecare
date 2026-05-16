@@ -23,8 +23,8 @@ class Payment {
 
   factory Payment.fromJson(Map<String, dynamic> json) {
     return Payment(
-      id: json['id'] ?? '',
-      orderId: json['order_id'] ?? '',
+      id: json['id']?.toString() ?? '',
+      orderId: json['order_id']?.toString() ?? '',
       amount: double.tryParse(json['amount']?.toString() ?? '0') ?? 0.0,
       method: json['method'] ?? 'transfer',
       status: json['status'] ?? 'pending',

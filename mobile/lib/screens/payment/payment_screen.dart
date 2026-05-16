@@ -34,11 +34,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
     setState(() => _isLoading = true);
     try {
-      String? proofUrl;
-      if (_proofFile != null) {
-        proofUrl = await _uploadService.uploadPaymentProof(_proofFile!);
-      }
-      await _paymentService.initiate(orderId: order.id, amount: order.service?.price ?? 0, method: _method, proofUrl: proofUrl);
+      await _paymentService.initiate(
+        orderId: int.tryParse(order.id) ?? 0, 
+        amount: order.service?.price ?? 0, 
+        method: _method, 
+        proofFile: _proofFile,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pembayaran berhasil dikirim!'), backgroundColor: AppColors.success));
       Navigator.pop(context);
