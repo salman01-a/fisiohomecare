@@ -11,7 +11,7 @@ router.get('/', authorize('admin'), getAllPayments);
 
 router.post('/initiate', authorize('patient'), [
   body('order_id').isInt().withMessage('Valid order_id required'),
-  body('amount').isDecimal().withMessage('Valid amount required'),
+  body('amount').isNumeric().withMessage('Valid amount required'),
   body('method').isIn(['transfer', 'cash']).withMessage('Method must be transfer or cash'),
 ], validate, initiatePayment);
 

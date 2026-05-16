@@ -29,7 +29,7 @@ class Payment {
       method: json['method'] ?? 'transfer',
       status: json['status'] ?? 'pending',
       proofUrl: json['proof_url'],
-      confirmedBy: json['confirmed_by'],
+      confirmedBy: json['confirmed_by']?.toString(),
       paidAt:
           json['paid_at'] != null ? DateTime.parse(json['paid_at']) : null,
       createdAt:

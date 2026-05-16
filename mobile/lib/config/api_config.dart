@@ -4,10 +4,9 @@ class ApiConfig {
   // Android emulator uses 10.0.2.2 to reach host machine's localhost
   // iOS simulator can use localhost directly
   static String get baseUrl {
-    if (Platform.isAndroid) {
-      return 'http://192.168.1.7:3000/v1';
-    }
-    return 'http://localhost:3000/v1';
+    // Both physical devices and emulators on the same network can access the host machine's IP
+    // Local IP address of the host machine
+    return 'http://192.168.1.7:3000/v1';
   }
 
   // Auth

@@ -50,6 +50,7 @@ const getAllOrders = async (req, res, next) => {
         },
         { association: 'schedule' },
         { association: 'payment' },
+        { association: 'service' },
       ],
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -79,7 +80,7 @@ const getAllOrders = async (req, res, next) => {
 const createOrder = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
-    const { therapist_id, schedule_id, service_type, address, lat, lng, notes } = req.body;
+    const { therapist_id, schedule_id, service_id, service_type, address, lat, lng, notes } = req.body;
 
     // Get patient profile
     const patient = await Patient.findOne({ where: { user_id: req.user.id } });
@@ -114,6 +115,7 @@ const createOrder = async (req, res, next) => {
       patient_id: patient.id,
       therapist_id,
       schedule_id,
+      service_id,
       service_type,
       address: address || patient.address,
       lat,
@@ -136,6 +138,7 @@ const createOrder = async (req, res, next) => {
           include: [{ association: 'user', attributes: ['id', 'name', 'email', 'phone'] }],
         },
         { association: 'schedule' },
+        { association: 'service' },
       ],
     });
 
@@ -165,6 +168,7 @@ const getOrderById = async (req, res, next) => {
         { association: 'schedule' },
         { association: 'payment' },
         { association: 'therapyRecord' },
+        { association: 'service' },
       ],
     });
 
