@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { body } = require('express-validator');
 const validate = require('../middleware/validate');
 const { authenticate, authorize } = require('../middleware/auth');
-const { getAllPayments, initiatePayment, confirmPayment, getPaymentByOrderId } = require('../controllers/paymentController');
+const { getAllPayments, initiatePayment, confirmPayment, getPaymentByOrderId, streamPaymentProof } = require('../controllers/paymentController');
 
 router.use(authenticate);
 
@@ -20,5 +20,6 @@ router.put('/:order_id/confirm', authorize('admin'), [
 ], validate, confirmPayment);
 
 router.get('/:order_id', getPaymentByOrderId);
+router.get('/:order_id/proof', authorize('admin'), streamPaymentProof);
 
 module.exports = router;

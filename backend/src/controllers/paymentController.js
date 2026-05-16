@@ -1,6 +1,48 @@
 const { Payment, Order, Patient, Therapist, User } = require('../models');
+const { getBucket } = require('../config/firebase');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
+
+const streamPaymentProof = async (req, res, next) => {
+  try {
+    const payment = await Payment.findOne({ where: { order_id: req.params.order_id } });
+    if (!payment || !payment.proof_url) {
+      throw ApiError.notFound('Payment proof not found');
+    }
+
+    // CATATAN PENTING: Untuk cara ini, pastikan 'proof_url' yang disimpan di database
+    // adalah PATH file di bucket (contoh: "payments/order_123.jpg"), 
+    // BUKAN URL publik lengkap yang berawalan "https://firebasestorage...".
+    const filePath = payment.proof_url; 
+    
+    const bucket = getBucket();
+    if (!bucket) {
+      throw ApiError.internal('Firebase Storage is not configured');
+    }
+
+    const file = bucket.file(filePath);
+
+    // Cek apakah file benar-benar ada di bucket
+    const [exists] = await file.exists();
+    if (!exists) {
+      throw ApiError.notFound('Image file not found in storage bucket');
+    }
+
+    // Ambil metadata untuk mengetahui tipe file (jpeg/png) agar browser membacanya sebagai gambar
+    const [metadata] = await file.getMetadata();
+    res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
+
+    // Lakukan streaming file langsung ke frontend
+    file.createReadStream()
+      .on('error', (err) => {
+        next(ApiError.internal('Error streaming image file'));
+      })
+      .pipe(res);
+
+  } catch (error) { 
+    next(error); 
+  }
+};
 
 const initiatePayment = async (req, res, next) => {
   try {
@@ -90,4 +132,4 @@ const getAllPayments = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { getAllPayments, initiatePayment, confirmPayment, getPaymentByOrderId };
+module.exports = { getAllPayments, initiatePayment, confirmPayment, getPaymentByOrderId, streamPaymentProof };
