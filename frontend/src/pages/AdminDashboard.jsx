@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { dashboardAPI, therapistAPI, serviceAPI, orderAPI, paymentAPI, nosqlAPI } from '../services/api';
+import { dashboardAPI, therapistAPI, serviceAPI, orderAPI, paymentAPI, nosqlAPI, recordAPI } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import StatCard from '../components/StatCard';
@@ -28,6 +28,14 @@ export default function AdminDashboard() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderTracking, setOrderTracking] = useState(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
+
+  // Full Therapy Record (with NoSQL data)
+  const [fullRecord, setFullRecord] = useState(null);
+  const [fullRecordLoading, setFullRecordLoading] = useState(false);
+
+  // Payment Proof Image Modal State
+  const [proofImageUrl, setProofImageUrl] = useState(null);
+  const [proofLoading, setProofLoading] = useState(false);
 
   // Therapist Schedule Modal State
   const [selectedTherapist, setSelectedTherapist] = useState(null);
@@ -96,10 +104,13 @@ export default function AdminDashboard() {
 
   const handleViewProof = async (orderId) => {
     try {
+      setProofLoading(true);
       const blobUrl = await paymentAPI.getProofBlobUrl(orderId);
-      window.open(blobUrl, '_blank');
+      setProofImageUrl(blobUrl);
     } catch (err) {
       alert(err.message);
+    } finally {
+      setProofLoading(false);
     }
   };
 
@@ -143,6 +154,7 @@ export default function AdminDashboard() {
       // Fetch NoSQL tracking in parallel
       setOrderTracking(null);
       setTrackingLoading(true);
+      setFullRecord(null);
       try {
         const trackRes = await nosqlAPI.getTracking(id);
         setOrderTracking(trackRes.data);
@@ -150,6 +162,18 @@ export default function AdminDashboard() {
         setOrderTracking(null);
       } finally {
         setTrackingLoading(false);
+      }
+      // Fetch full therapy record (with NoSQL data) if available
+      if (res.data?.therapyRecord?.id) {
+        setFullRecordLoading(true);
+        try {
+          const recRes = await recordAPI.getById(res.data.therapyRecord.id);
+          setFullRecord(recRes.data);
+        } catch (_) {
+          setFullRecord(null);
+        } finally {
+          setFullRecordLoading(false);
+        }
       }
     } catch (err) { alert(err.message); }
   };
@@ -450,7 +474,7 @@ export default function AdminDashboard() {
       {/* Order Detail Modal */}
       <Modal
         isOpen={!!selectedOrder}
-        onClose={() => { setSelectedOrder(null); setOrderTracking(null); }}
+        onClose={() => { setSelectedOrder(null); setOrderTracking(null); setFullRecord(null); }}
         title={`Detail Pesanan #${selectedOrder?.id || ''}`}
       >
         {selectedOrder && (
@@ -531,10 +555,89 @@ export default function AdminDashboard() {
             {selectedOrder.therapyRecord && (
               <div className="section-card" style={{ margin: 0 }}>
                 <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#64748b' }}>📝 Rekam Medis</h3>
-                <div className="info-row"><span>Keluhan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{selectedOrder.therapyRecord.chief_complaint}</span></div>
-                <div className="info-row"><span>Diagnosis</span><span style={{maxWidth:'200px',textAlign:'right'}}>{selectedOrder.therapyRecord.diagnosis}</span></div>
-                <div className="info-row"><span>Tindakan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{selectedOrder.therapyRecord.actions_taken}</span></div>
-                <div className="info-row"><span>Sesi ke</span><span>{selectedOrder.therapyRecord.session_number}</span></div>
+                <div className="info-row"><span>Keluhan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{selectedOrder.therapyRecord.chief_complaint || '-'}</span></div>
+                <div className="info-row"><span>Diagnosis</span><span style={{maxWidth:'200px',textAlign:'right'}}>{selectedOrder.therapyRecord.diagnosis || '-'}</span></div>
+                <div className="info-row"><span>Tindakan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{selectedOrder.therapyRecord.actions_taken || '-'}</span></div>
+                <div className="info-row"><span>Sesi ke</span><span>{selectedOrder.therapyRecord.session_number || 1}</span></div>
+                {selectedOrder.therapyRecord.check_in_at && <div className="info-row"><span>Check-in</span><span>{new Date(selectedOrder.therapyRecord.check_in_at).toLocaleString('id-ID')}</span></div>}
+                {selectedOrder.therapyRecord.check_out_at && <div className="info-row"><span>Check-out</span><span>{new Date(selectedOrder.therapyRecord.check_out_at).toLocaleString('id-ID')}</span></div>}
+
+                {/* Therapy Photos (SQL) */}
+                {(() => {
+                  const rec = fullRecord || selectedOrder.therapyRecord;
+                  const photos = rec.photo_urls || [];
+                  if (photos.length === 0) return null;
+                  return (
+                    <div style={{ marginTop: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>📸 Foto Dokumentasi ({photos.length})</span>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                        {photos.map((url, i) => (
+                          <img
+                            key={i}
+                            src={url}
+                            alt={`therapy-photo-${i}`}
+                            onClick={() => setProofImageUrl(url)}
+                            style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'transform 0.15s' }}
+                            onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* NoSQL Therapy Details */}
+            {fullRecordLoading && (
+              <div className="section-card" style={{ margin: 0, borderLeft: '3px solid #f59e0b' }}>
+                <p style={{ color: '#94a3b8', fontSize: 13 }}>Memuat data NoSQL...</p>
+              </div>
+            )}
+            {fullRecord?.nosql_details && (
+              <div className="section-card" style={{ margin: 0, borderLeft: '3px solid #f59e0b' }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  🔥 Catatan Fleksibel <span style={{ fontSize: 10, background: '#fef3c7', color: '#d97706', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>NoSQL</span>
+                </h3>
+                {fullRecord.nosql_details.progress_rating != null && (
+                  <div className="info-row">
+                    <span>Progres Pemulihan</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontWeight: 700, color: '#6366f1' }}>{fullRecord.nosql_details.progress_rating}/10</span>
+                      <span style={{
+                        display: 'inline-block', width: 60, height: 6, borderRadius: 3, background: '#e2e8f0', overflow: 'hidden'
+                      }}>
+                        <span style={{
+                          display: 'block', height: '100%', borderRadius: 3,
+                          width: `${(fullRecord.nosql_details.progress_rating / 10) * 100}%`,
+                          background: fullRecord.nosql_details.progress_rating <= 3 ? '#ef4444' : fullRecord.nosql_details.progress_rating <= 6 ? '#f59e0b' : '#10b981',
+                        }} />
+                      </span>
+                    </span>
+                  </div>
+                )}
+                {fullRecord.nosql_details.flexible_notes && (
+                  <div className="info-row"><span>Catatan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{fullRecord.nosql_details.flexible_notes}</span></div>
+                )}
+                {fullRecord.nosql_details.attachments?.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>📎 Lampiran ({fullRecord.nosql_details.attachments.length})</span>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                      {fullRecord.nosql_details.attachments.map((url, i) => (
+                        <img
+                          key={i}
+                          src={url}
+                          alt={`attachment-${i}`}
+                          onClick={() => setProofImageUrl(url)}
+                          style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'transform 0.15s' }}
+                          onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                          onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             <div className="action-btns" style={{ justifyContent: 'flex-end' }}>
@@ -597,6 +700,61 @@ export default function AdminDashboard() {
           </div>
         )}
       </Modal>
+
+      {/* Payment Proof / Image Lightbox Modal */}
+      {proofImageUrl && (
+        <div
+          className="modal-overlay"
+          onClick={() => { setProofImageUrl(null); }}
+          style={{ zIndex: 10000 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <button
+              onClick={() => setProofImageUrl(null)}
+              style={{
+                position: 'absolute', top: -12, right: -12, zIndex: 10,
+                width: 32, height: 32, borderRadius: '50%',
+                background: '#1e293b', color: 'white', border: 'none',
+                fontSize: 16, cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              }}
+            >
+              ✕
+            </button>
+            <img
+              src={proofImageUrl}
+              alt="Bukti Pembayaran"
+              style={{
+                maxWidth: '85vw',
+                maxHeight: '85vh',
+                borderRadius: 12,
+                boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+                objectFit: 'contain',
+                background: 'white',
+              }}
+            />
+          </div>
+        </div>
+      )}
+      {proofLoading && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <div className="loading-spinner" />
+            <p style={{ color: 'white', fontSize: 14 }}>Memuat bukti pembayaran...</p>
+          </div>
+        </div>
+      )}
 
     </div>
   );

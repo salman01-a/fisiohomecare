@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/order.dart';
 import '../services/order_service.dart';
+import '../utils/error_helper.dart';
 
 class OrderProvider extends ChangeNotifier {
   final OrderService _service = OrderService();
@@ -33,7 +34,7 @@ class OrderProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
-      _error = e.toString();
+      _error = ErrorHelper.extractMessage(e);
       notifyListeners();
     }
   }
@@ -78,7 +79,7 @@ class OrderProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
-      _error = e.toString();
+      _error = ErrorHelper.extractMessage(e);
       notifyListeners();
     }
   }
@@ -158,7 +159,7 @@ class OrderProvider extends ChangeNotifier {
       return order;
     } catch (e) {
       _isLoading = false;
-      _error = e.toString();
+      _error = ErrorHelper.extractMessage(e);
       notifyListeners();
       rethrow;
     }
@@ -180,7 +181,7 @@ class OrderProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
-      _error = e.toString();
+      _error = ErrorHelper.extractMessage(e);
       notifyListeners();
     }
   }
