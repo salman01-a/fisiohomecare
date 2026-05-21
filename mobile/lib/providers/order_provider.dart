@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/order.dart';
 import '../services/order_service.dart';
@@ -10,10 +11,14 @@ class OrderProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  Timer? _pollingTimer;
+  bool _isPolling = false;
+
   List<Order> get orders => _orders;
   Order? get selectedOrder => _selectedOrder;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  bool get isPolling => _isPolling;
 
   /// Fetch all patient orders
   Future<void> fetchOrders({String? status}) async {
@@ -33,6 +38,33 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
+  /// Silently refresh orders without showing loading indicator (for live updates)
+  Future<void> silentRefreshOrders({String? status}) async {
+    try {
+      final freshOrders = await _service.getAll(status: status);
+
+      // Check if any status actually changed
+      bool hasChanges = false;
+      if (freshOrders.length != _orders.length) {
+        hasChanges = true;
+      } else {
+        for (int i = 0; i < freshOrders.length; i++) {
+          if (freshOrders[i].status != _orders[i].status) {
+            hasChanges = true;
+            break;
+          }
+        }
+      }
+
+      if (hasChanges) {
+        _orders = freshOrders;
+        notifyListeners();
+      }
+    } catch (_) {
+      // Silently ignore errors during polling
+    }
+  }
+
   /// Fetch single order detail
   Future<void> fetchOrderDetail(String id) async {
     try {
@@ -47,6 +79,44 @@ class OrderProvider extends ChangeNotifier {
     } catch (e) {
       _isLoading = false;
       _error = e.toString();
+      notifyListeners();
+    }
+  }
+
+  /// Silently refresh a single order detail (for live updates)
+  Future<void> silentRefreshOrderDetail(String id) async {
+    try {
+      final freshOrder = await _service.getById(id);
+      if (_selectedOrder != null && freshOrder.status != _selectedOrder!.status) {
+        _selectedOrder = freshOrder;
+        notifyListeners();
+      }
+    } catch (_) {
+      // Silently ignore
+    }
+  }
+
+  /// Start polling for live status updates (every 10 seconds)
+  void startPolling({String? orderId}) {
+    stopPolling();
+    _isPolling = true;
+    notifyListeners();
+
+    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (orderId != null) {
+        silentRefreshOrderDetail(orderId);
+      } else {
+        silentRefreshOrders();
+      }
+    });
+  }
+
+  /// Stop polling
+  void stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+    if (_isPolling) {
+      _isPolling = false;
       notifyListeners();
     }
   }
@@ -118,5 +188,11 @@ class OrderProvider extends ChangeNotifier {
   void clearSelection() {
     _selectedOrder = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    stopPolling();
+    super.dispose();
   }
 }

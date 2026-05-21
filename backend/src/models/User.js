@@ -60,8 +60,6 @@ module.exports = (sequelize) => {
     timestamps: true,
     underscored: true,
     indexes: [
-      { unique: true, fields: ['email'] },
-      { unique: true, fields: ['firebase_uid'] },
       { fields: ['role'] },
     ],
   });

@@ -13,13 +13,38 @@ class OrderListScreen extends StatefulWidget {
   State<OrderListScreen> createState() => _OrderListScreenState();
 }
 
-class _OrderListScreenState extends State<OrderListScreen> {
+class _OrderListScreenState extends State<OrderListScreen> with WidgetsBindingObserver {
+  late OrderProvider _orderProvider;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<OrderProvider>(context, listen: false).fetchOrders();
+      _orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      _orderProvider.fetchOrders();
+      _orderProvider.startPolling(); // Start live updates
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Only stop polling if this is the standalone screen (not embedded in HomeScreen)
+    if (!widget.embedded) {
+      _orderProvider.stopPolling();
+    }
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final op = Provider.of<OrderProvider>(context, listen: false);
+    if (state == AppLifecycleState.paused) {
+      op.stopPolling();
+    } else if (state == AppLifecycleState.resumed) {
+      op.startPolling();
+    }
   }
 
   @override
@@ -42,13 +67,45 @@ class _OrderListScreenState extends State<OrderListScreen> {
         return RefreshIndicator(
           color: AppColors.primary,
           onRefresh: () => op.fetchOrders(),
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: op.orders.length,
-            itemBuilder: (ctx, i) {
-              final o = op.orders[i];
-              return OrderCard(order: o, onTap: () => Navigator.pushNamed(context, AppRoutes.orderDetail, arguments: o.id));
-            },
+          child: Column(
+            children: [
+              // Live status indicator bar
+              if (op.isPolling)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  color: AppColors.success.withValues(alpha: 0.08),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: AppColors.success,
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: AppColors.success.withValues(alpha: 0.4), blurRadius: 4)],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Status pesanan diperbarui otomatis',
+                        style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: op.orders.length,
+                  itemBuilder: (ctx, i) {
+                    final o = op.orders[i];
+                    return OrderCard(order: o, onTap: () => Navigator.pushNamed(context, AppRoutes.orderDetail, arguments: o.id));
+                  },
+                ),
+              ),
+            ],
           ),
         );
       },

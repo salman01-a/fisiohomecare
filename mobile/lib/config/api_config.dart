@@ -6,7 +6,7 @@ class ApiConfig {
   static String get baseUrl {
     // Both physical devices and emulators on the same network can access the host machine's IP
     // Local IP address of the host machine
-    return 'http://172.20.10.3:3000/v1';
+    return 'http://localhost:3000/v1';
   }
 
   // Auth

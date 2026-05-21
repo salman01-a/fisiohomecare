@@ -16,7 +16,7 @@ class OrderDetailScreen extends StatefulWidget {
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();
 }
 
-class _OrderDetailScreenState extends State<OrderDetailScreen> {
+class _OrderDetailScreenState extends State<OrderDetailScreen> with WidgetsBindingObserver {
   final NosqlService _nosqlService = NosqlService();
   final OrderService _orderService = OrderService();
   Map<String, dynamic>? _tracking;
@@ -24,15 +24,37 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   int _selectedRating = 0;
   final TextEditingController _commentController = TextEditingController();
   bool _submittingRating = false;
+  late String _orderId;
+  late OrderProvider _orderProvider;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final id = ModalRoute.of(context)!.settings.arguments as String;
-      Provider.of<OrderProvider>(context, listen: false).fetchOrderDetail(id);
-      _loadTracking(id);
+      _orderId = ModalRoute.of(context)!.settings.arguments as String;
+      _orderProvider = Provider.of<OrderProvider>(context, listen: false);
+      _orderProvider.fetchOrderDetail(_orderId);
+      _orderProvider.startPolling(orderId: _orderId); // Start live updates for this order
+      _loadTracking(_orderId);
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _orderProvider.stopPolling();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final op = Provider.of<OrderProvider>(context, listen: false);
+    if (state == AppLifecycleState.paused) {
+      op.stopPolling();
+    } else if (state == AppLifecycleState.resumed) {
+      op.startPolling(orderId: _orderId);
+    }
   }
 
   Future<void> _loadTracking(String orderId) async {
@@ -51,15 +73,50 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       appBar: AppBar(title: const Text('Detail Pesanan')),
       body: Consumer<OrderProvider>(
         builder: (ctx, op, _) {
-          if (op.isLoading) return const LoadingIndicator();
+          if (op.isLoading && op.selectedOrder == null) return const LoadingIndicator();
           final o = op.selectedOrder;
           if (o == null) return const Center(child: Text('Pesanan tidak ditemukan'));
+
+          // Reload tracking data silently if status changes
+          if (op.isPolling && _tracking != null && _tracking!['current_status'] != o.status) {
+             _loadTracking(o.id);
+          }
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Live status indicator bar
+                if (op.isPolling && (o.status == 'confirmed' || o.status == 'otw' || o.status == 'ongoing'))
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: AppColors.success,
+                            shape: BoxShape.circle,
+                            boxShadow: [BoxShadow(color: AppColors.success.withValues(alpha: 0.4), blurRadius: 4)],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Menerima pembaruan status langsung',
+                          style: TextStyle(fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 // Status header
                 Center(child: StatusBadge(status: o.status)),
                 const SizedBox(height: 20),

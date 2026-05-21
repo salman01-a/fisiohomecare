@@ -40,9 +40,6 @@ class ProfileScreen extends StatelessWidget {
 
             // Menu items
             _menuItem(context, Icons.receipt_long_outlined, 'Pesanan Saya', () => Navigator.pushNamed(context, AppRoutes.orderList)),
-            _menuItem(context, Icons.medical_information_outlined, 'Rekam Terapi', () {
-              Navigator.pushNamed(context, AppRoutes.recordList);
-            }),
             _menuItem(context, Icons.info_outline, 'Tentang Aplikasi', () {
               showAboutDialog(
                 context: context,
