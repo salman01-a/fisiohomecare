@@ -5,6 +5,7 @@ import '../../models/therapy_record.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../config/api_config.dart';
 
 class RecordDetailScreen extends StatefulWidget {
   const RecordDetailScreen({super.key});
@@ -240,11 +241,11 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
               itemCount: attachments.length,
               itemBuilder: (ctx, i) {
                 return GestureDetector(
-                  onTap: () => _showFullImage(context, attachments[i]),
+                  onTap: () => _showFullImage(context, ApiConfig.getImageUrl(attachments[i])),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: Image.network(
-                      attachments[i],
+                      ApiConfig.getImageUrl(attachments[i]),
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
                         decoration: BoxDecoration(

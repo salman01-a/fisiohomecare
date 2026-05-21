@@ -120,9 +120,24 @@ const getTherapistSchedules = async (req, res, next) => {
     if (date) where.date = date;
     if (is_booked !== undefined) where.is_booked = is_booked === 'true';
 
-    const schedules = await Schedule.findAll({
+    let schedules = await Schedule.findAll({
       where,
       order: [['date', 'ASC'], ['start_time', 'ASC']],
+    });
+
+    const now = new Date();
+    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+    schedules = schedules.filter(s => {
+      // If it's booked, we should show it (since it's an order)
+      if (s.is_booked) return true;
+
+      // Filter out past and 'mepet' schedules
+      const [year, month, day] = s.date.split('-');
+      const [hours, minutes] = s.start_time.split(':');
+      const scheduleTime = new Date(year, month - 1, day, hours, minutes);
+
+      return scheduleTime > twoHoursFromNow;
     });
 
     return ApiResponse.success(res, schedules, 'Schedules retrieved successfully');

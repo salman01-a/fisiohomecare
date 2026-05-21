@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/therapist.dart';
 import '../utils/constants.dart';
+import '../config/api_config.dart';
 
 class TherapistCard extends StatelessWidget {
   final Therapist therapist;
@@ -32,7 +33,7 @@ class TherapistCard extends StatelessWidget {
                         ? ClipRRect(
                           borderRadius: BorderRadius.circular(16),
                           child: Image.network(
-                            therapist.photoUrl!,
+                            ApiConfig.getImageUrl(therapist.photoUrl),
                             fit: BoxFit.cover,
                             errorBuilder:
                                 (context, error, stackTrace) => const Icon(

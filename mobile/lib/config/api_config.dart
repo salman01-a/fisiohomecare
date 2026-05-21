@@ -9,6 +9,15 @@ class ApiConfig {
     return 'http://192.168.1.8:3000/v1';
   }
 
+  static String getImageUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    if (url.startsWith('/uploads')) {
+      return 'http://192.168.1.8:3000$url';
+    }
+    return url;
+  }
+
+
   // Auth
   static const String login = '/auth/login';
   static const String register = '/auth/register';

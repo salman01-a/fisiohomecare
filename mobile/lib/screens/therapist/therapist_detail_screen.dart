@@ -5,6 +5,7 @@ import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../utils/routes.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../config/api_config.dart';
 
 class TherapistDetailScreen extends StatefulWidget {
   const TherapistDetailScreen({super.key});
@@ -56,7 +57,7 @@ class _TherapistDetailScreenState extends State<TherapistDetailScreen> {
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(24),
                                 child: Image.network(
-                                  t.photoUrl!,
+                                  ApiConfig.getImageUrl(t.photoUrl),
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) =>
                                       const Icon(

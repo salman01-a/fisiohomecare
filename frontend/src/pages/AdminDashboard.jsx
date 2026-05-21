@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { dashboardAPI, therapistAPI, serviceAPI, orderAPI, paymentAPI, nosqlAPI, recordAPI } from '../services/api';
+import { dashboardAPI, therapistAPI, serviceAPI, orderAPI, paymentAPI, nosqlAPI, recordAPI, getImageUrl } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import StatCard from '../components/StatCard';
@@ -18,6 +19,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const toast = useToast();
 
   // Service CRUD State
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
@@ -80,26 +82,29 @@ export default function AdminDashboard() {
   const handleValidate = async (id, status) => {
     try {
       await therapistAPI.validate(id, status);
+      toast.success(`Terapis ${status === 'active' ? 'divalidasi' : 'di-suspend'}`);
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   };
 
   const handleOrderStatus = async (id, status) => {
     try {
       await orderAPI.updateStatus(id, status);
+      toast.success('Status pesanan berhasil diupdate');
       loadData();
       if (selectedOrder) {
         const res = await orderAPI.getById(id);
         setSelectedOrder(res.data);
       }
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   };
 
   const handlePaymentConfirm = async (orderId, status) => {
     try {
       await paymentAPI.confirm(orderId, status);
+      toast.success('Pembayaran berhasil ' + (status === 'confirmed' ? 'disetujui' : 'ditolak'));
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   };
 
   const handleViewProof = async (orderId) => {
@@ -108,7 +113,7 @@ export default function AdminDashboard() {
       const blobUrl = await paymentAPI.getProofBlobUrl(orderId);
       setProofImageUrl(blobUrl);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setProofLoading(false);
     }
@@ -130,20 +135,23 @@ export default function AdminDashboard() {
     try {
       if (editingService) {
         await serviceAPI.update(editingService.id, serviceForm);
+        toast.success('Layanan diupdate');
       } else {
         await serviceAPI.create(serviceForm);
+        toast.success('Layanan ditambahkan');
       }
       setIsServiceModalOpen(false);
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   };
 
   const handleServiceDelete = async (id) => {
     if (!confirm('Hapus layanan ini?')) return;
     try {
       await serviceAPI.delete(id);
+      toast.success('Layanan dihapus');
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   };
 
   // Order Detail
@@ -175,7 +183,7 @@ export default function AdminDashboard() {
           setFullRecordLoading(false);
         }
       }
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   };
 
   // Therapist Schedule Management
@@ -193,19 +201,21 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       await therapistAPI.createSchedule(selectedTherapist.id, newSchedule);
+      toast.success('Jadwal ditambahkan');
       setNewSchedule({ date: '', start_time: '', end_time: '' });
       const res = await therapistAPI.getSchedules(selectedTherapist.id);
       setTherapistSchedules(res.data || []);
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   };
 
   const handleDeleteSchedule = async (sid) => {
     if (!confirm('Hapus jadwal ini?')) return;
     try {
       await therapistAPI.deleteSchedule(selectedTherapist.id, sid);
+      toast.success('Jadwal dihapus');
       const res = await therapistAPI.getSchedules(selectedTherapist.id);
       setTherapistSchedules(res.data || []);
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   };
 
   const formatCurrency = (val) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0);
@@ -574,9 +584,9 @@ export default function AdminDashboard() {
                         {photos.map((url, i) => (
                           <img
                             key={i}
-                            src={url}
+                            src={getImageUrl(url)}
                             alt={`therapy-photo-${i}`}
-                            onClick={() => setProofImageUrl(url)}
+                            onClick={() => setProofImageUrl(getImageUrl(url))}
                             style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'transform 0.15s' }}
                             onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
                             onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
@@ -627,15 +637,36 @@ export default function AdminDashboard() {
                       {fullRecord.nosql_details.attachments.map((url, i) => (
                         <img
                           key={i}
-                          src={url}
+                          src={getImageUrl(url)}
                           alt={`attachment-${i}`}
-                          onClick={() => setProofImageUrl(url)}
+                          onClick={() => setProofImageUrl(getImageUrl(url))}
                           style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'transform 0.15s' }}
                           onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
                           onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
                         />
                       ))}
                     </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Review Pasien Section */}
+            {selectedOrder.status === 'done' && selectedOrder.rating && (
+              <div className="section-card" style={{ margin: 0 }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#64748b' }}>⭐ Ulasan Pasien</h3>
+                <div className="info-row">
+                  <span>Rating</span>
+                  <span style={{ fontWeight: 'bold', color: '#f59e0b', fontSize: '16px' }}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <span key={i} style={{ color: i < selectedOrder.rating ? '#f59e0b' : '#e2e8f0' }}>★</span>
+                    ))}
+                  </span>
+                </div>
+                {selectedOrder.rating_comment && (
+                  <div className="info-row">
+                    <span>Komentar</span>
+                    <span style={{ maxWidth: '200px', textAlign: 'right', fontStyle: 'italic' }}>"{selectedOrder.rating_comment}"</span>
                   </div>
                 )}
               </div>

@@ -1,5 +1,13 @@
 const BASE_URL = 'http://192.168.1.8:3000/v1';
 
+export function getImageUrl(url) {
+  if (!url) return url;
+  if (url.startsWith('/uploads')) {
+    return `http://192.168.1.8:3000${url}`;
+  }
+  return url;
+}
+
 function getToken() {
   return localStorage.getItem('token');
 }

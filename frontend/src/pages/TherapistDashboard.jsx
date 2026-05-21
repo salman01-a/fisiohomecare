@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { orderAPI, therapistAPI, recordAPI, uploadAPI, nosqlAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
+import { orderAPI, therapistAPI, recordAPI, uploadAPI, nosqlAPI, getImageUrl } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import StatusBadge from '../components/StatusBadge';
@@ -16,6 +17,10 @@ export default function TherapistDashboard() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newSchedule, setNewSchedule] = useState({ date: '', start_time: '', end_time: '' });
+  const toast = useToast();
+
+  // History Detail Modal
+  const [historyDetailOrder, setHistoryDetailOrder] = useState(null);
 
   // Therapy Record Modal State
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -64,8 +69,9 @@ export default function TherapistDashboard() {
     }
     try {
       await orderAPI.updateStatus(id, status);
+      toast.success('Status pesanan berhasil diupdate');
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   };
 
   const handleTrackingUpdate = async (orderId, trackingStatus, notes) => {
@@ -124,8 +130,8 @@ export default function TherapistDashboard() {
       setRecordPhotos([]);
       setPhotoPreviewUrls([]);
       loadData();
-      alert('Sesi berhasil diselesaikan, Rekam Medis & data NoSQL tersimpan!');
-    } catch (err) { alert(err.message); }
+      toast.success('Sesi berhasil diselesaikan, Rekam Medis & data NoSQL tersimpan!');
+    } catch (err) { toast.error(err.message); }
     finally { setSubmittingRecord(false); }
   };
 
@@ -134,9 +140,10 @@ export default function TherapistDashboard() {
     try {
       const tid = profile?.id;
       await therapistAPI.createSchedule(tid, newSchedule);
+      toast.success('Jadwal ditambahkan');
       setNewSchedule({ date: '', start_time: '', end_time: '' });
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   };
 
   const handleDeleteSchedule = async (sid) => {
@@ -144,8 +151,9 @@ export default function TherapistDashboard() {
     try {
       const tid = profile?.id;
       await therapistAPI.deleteSchedule(tid, sid);
+      toast.success('Jadwal dihapus');
       loadData();
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
   };
 
   const nextStatus = { pending: null, confirmed: 'otw', otw: 'ongoing', ongoing: 'done' };
@@ -164,6 +172,9 @@ export default function TherapistDashboard() {
       {profile?.status === 'active' && <span className="badge badge--active">Terverifikasi</span>}
     </>
   );
+
+  const activeOrders = orders.filter(o => !['done', 'cancelled'].includes(o.status));
+  const historyOrders = orders.filter(o => ['done', 'cancelled'].includes(o.status));
 
   return (
     <div className="dashboard">
@@ -194,38 +205,64 @@ export default function TherapistDashboard() {
           {loading ? (
             <div className="content-loading"><div className="loading-spinner" /><p>Memuat data...</p></div>
           ) : activeTab === 'orders' ? (
-            <div className="section-card">
-              <div className="section-header"><h2>Daftar Pesanan</h2></div>
-              {orders.length === 0 ? <p className="empty-text">Belum ada pesanan</p> : (
-                <div className="cards-grid">
-                  {orders.map(o => (
-                    <div key={o.id} className="order-card">
-                      <div className="order-card-header">
-                        <div>
-                          <h3>{o.patient?.user?.name || 'Pasien'}</h3>
-                          <p className="text-muted">{o.service?.name || o.service_type || '-'}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div className="section-card" style={{ margin: 0 }}>
+                <div className="section-header"><h2>Pesanan Aktif</h2></div>
+                {activeOrders.length === 0 ? <p className="empty-text">Belum ada pesanan aktif</p> : (
+                  <div className="cards-grid">
+                    {activeOrders.map(o => (
+                      <div key={o.id} className="order-card">
+                        <div className="order-card-header">
+                          <div>
+                            <h3>{o.patient?.user?.name || 'Pasien'}</h3>
+                            <p className="text-muted">{o.service?.name || o.service_type || '-'}</p>
+                          </div>
+                          <StatusBadge status={o.status} />
                         </div>
-                        <StatusBadge status={o.status} />
-                      </div>
-                      <div className="order-card-body">
-                        <div className="info-row"><span>📍 Alamat</span><span>{o.address}</span></div>
-                        {o.notes && <div className="info-row"><span>📝 Catatan</span><span>{o.notes}</span></div>}
-                        <div className="info-row"><span>📅 Jadwal</span><span>{o.schedule?.date || '-'} {o.schedule?.start_time || ''}</span></div>
-                      </div>
-                      {nextStatus[o.status] && profile?.status === 'active' && (
-                        <div className="order-card-actions">
-                          <button className="btn btn--primary" onClick={() => handleOrderStatus(o.id, nextStatus[o.status])}>
-                            {o.status === 'confirmed' ? '🚗 Dalam Perjalanan' : o.status === 'otw' ? '▶️ Mulai Sesi' : o.status === 'ongoing' ? '✅ Selesai' : 'Update'}
-                          </button>
-                          {o.status !== 'ongoing' && (
-                            <button className="btn btn--danger" onClick={() => handleOrderStatus(o.id, 'cancelled')}>Batalkan</button>
-                          )}
+                        <div className="order-card-body">
+                          <div className="info-row"><span>📍 Alamat</span><span>{o.address}</span></div>
+                          {o.notes && <div className="info-row"><span>📝 Catatan</span><span>{o.notes}</span></div>}
+                          <div className="info-row"><span>📅 Jadwal</span><span>{o.schedule?.date || '-'} {o.schedule?.start_time || ''}</span></div>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+                        {nextStatus[o.status] && profile?.status === 'active' && (
+                          <div className="order-card-actions">
+                            <button className="btn btn--primary" onClick={() => handleOrderStatus(o.id, nextStatus[o.status])}>
+                              {o.status === 'confirmed' ? '🚗 Dalam Perjalanan' : o.status === 'otw' ? '▶️ Mulai Sesi' : o.status === 'ongoing' ? '✅ Selesai' : 'Update'}
+                            </button>
+                            {o.status !== 'ongoing' && (
+                              <button className="btn btn--danger" onClick={() => handleOrderStatus(o.id, 'cancelled')}>Batalkan</button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="section-card" style={{ margin: 0 }}>
+                <div className="section-header"><h2>Riwayat Pesanan</h2></div>
+                {historyOrders.length === 0 ? <p className="empty-text">Belum ada riwayat pesanan</p> : (
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead><tr><th>Pasien</th><th>Layanan</th><th>Tanggal</th><th>Status</th><th>Aksi</th></tr></thead>
+                      <tbody>
+                        {historyOrders.map(o => (
+                          <tr key={o.id}>
+                            <td>{o.patient?.user?.name || '-'}</td>
+                            <td>{o.service?.name || o.service_type || '-'}</td>
+                            <td>{o.schedule?.date || '-'}</td>
+                            <td><StatusBadge status={o.status} /></td>
+                            <td>
+                              <button className="btn btn--sm btn--primary" onClick={() => setHistoryDetailOrder(o)}>Detail</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           ) : activeTab === 'schedules' ? (
             <div>
@@ -391,6 +428,58 @@ export default function TherapistDashboard() {
           </div>
         </form>
       </Modal>
+      <Modal 
+        isOpen={!!historyDetailOrder} 
+        onClose={() => setHistoryDetailOrder(null)} 
+        title={`Riwayat Pesanan #${historyDetailOrder?.id || ''}`}
+      >
+        {historyDetailOrder && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="section-card" style={{ margin: 0 }}>
+              <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#64748b' }}>👤 Pasien</h3>
+              <div className="info-row"><span>Nama</span><span>{historyDetailOrder.patient?.user?.name || '-'}</span></div>
+              <div className="info-row"><span>Alamat</span><span style={{maxWidth:'200px',textAlign:'right'}}>{historyDetailOrder.address}</span></div>
+            </div>
+
+            <div className="section-card" style={{ margin: 0 }}>
+              <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#64748b' }}>📋 Detail Layanan</h3>
+              <div className="info-row"><span>Layanan</span><span>{historyDetailOrder.service?.name || historyDetailOrder.service_type || '-'}</span></div>
+              <div className="info-row"><span>Jadwal</span><span>{historyDetailOrder.schedule?.date || '-'}</span></div>
+              <div className="info-row"><span>Status</span><StatusBadge status={historyDetailOrder.status} /></div>
+            </div>
+
+            {historyDetailOrder.therapyRecord && (
+              <div className="section-card" style={{ margin: 0 }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#64748b' }}>📝 Rekam Medis (SQL)</h3>
+                <div className="info-row"><span>Keluhan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{historyDetailOrder.therapyRecord.chief_complaint || '-'}</span></div>
+                <div className="info-row"><span>Diagnosis</span><span style={{maxWidth:'200px',textAlign:'right'}}>{historyDetailOrder.therapyRecord.diagnosis || '-'}</span></div>
+                <div className="info-row"><span>Tindakan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{historyDetailOrder.therapyRecord.actions_taken || '-'}</span></div>
+              </div>
+            )}
+
+            {historyDetailOrder.status === 'done' && historyDetailOrder.rating && (
+              <div className="section-card" style={{ margin: 0 }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#64748b' }}>⭐ Ulasan Pasien</h3>
+                <div className="info-row">
+                  <span>Rating</span>
+                  <span style={{ fontWeight: 'bold', color: '#f59e0b', fontSize: '16px' }}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <span key={i} style={{ color: i < historyDetailOrder.rating ? '#f59e0b' : '#e2e8f0' }}>★</span>
+                    ))}
+                  </span>
+                </div>
+                {historyDetailOrder.rating_comment && (
+                  <div className="info-row">
+                    <span>Komentar</span>
+                    <span style={{ maxWidth: '200px', textAlign: 'right', fontStyle: 'italic' }}>"{historyDetailOrder.rating_comment}"</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
     </div>
   );
 }
