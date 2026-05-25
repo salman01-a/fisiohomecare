@@ -130,6 +130,116 @@ class FirestoreService {
     await notifRef.update({ is_read: true });
     return true;
   }
+
+  // ============ User-based Notifications (for admin/therapist) ============
+
+  /**
+   * Send notification to any user (admin, therapist, etc.)
+   * Collection: users/{userId}/notifications
+   */
+  static async sendUserNotification(userId, title, message, type = 'info') {
+    const db = getFirestore();
+    if (!db) return null;
+
+    const notifRef = db.collection('users').doc(userId.toString()).collection('notifications').doc();
+    const notification = {
+      title,
+      message,
+      type,
+      is_read: false,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    await notifRef.set(notification);
+    return { id: notifRef.id, ...notification };
+  }
+
+  /**
+   * Get notifications for any user
+   */
+  static async getUserNotifications(userId, limit = 30) {
+    const db = getFirestore();
+    if (!db) return [];
+
+    const snapshot = await db.collection('users')
+      .doc(userId.toString())
+      .collection('notifications')
+      .orderBy('created_at', 'desc')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  /**
+   * Mark user notification as read
+   */
+  static async markUserNotificationRead(userId, notifId) {
+    const db = getFirestore();
+    if (!db) return null;
+
+    const notifRef = db.collection('users')
+      .doc(userId.toString())
+      .collection('notifications')
+      .doc(notifId);
+
+    await notifRef.update({ is_read: true });
+    return true;
+  }
+
+  // ============ Activity Logs ============
+
+  /**
+   * Log aktivitas user ke Firestore
+   * Koleksi: activity_logs
+   */
+  static async logActivity(userId, userName, action, description, metadata = {}) {
+    const db = getFirestore();
+    if (!db) return null;
+
+    const logRef = db.collection('activity_logs').doc();
+    const logData = {
+      user_id: userId,
+      user_name: userName,
+      action,
+      description,
+      metadata,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await logRef.set(logData);
+    return { id: logRef.id, ...logData };
+  }
+
+  /**
+   * Ambil activity logs (untuk admin dashboard)
+   */
+  static async getActivityLogs(limit = 50) {
+    const db = getFirestore();
+    if (!db) return [];
+
+    const snapshot = await db.collection('activity_logs')
+      .orderBy('created_at', 'desc')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  /**
+   * Ambil activity logs milik user tertentu
+   */
+  static async getActivityLogsByUser(userId, limit = 30) {
+    const db = getFirestore();
+    if (!db) return [];
+
+    const snapshot = await db.collection('activity_logs')
+      .where('user_id', '==', userId)
+      .orderBy('created_at', 'desc')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
 }
 
 module.exports = FirestoreService;

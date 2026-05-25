@@ -68,7 +68,7 @@ const getRecordById = async (req, res, next) => {
   try {
     const record = await TherapyRecord.findByPk(req.params.id, {
       include: [
-        { association: 'order', include: [{ association: 'schedule' }] },
+        { association: 'order', include: [{ association: 'schedule' }, { association: 'service' }] },
         { association: 'therapist', include: [{ association: 'user', attributes: ['id', 'name', 'email'] }] },
         { association: 'patient', include: [{ association: 'user', attributes: ['id', 'name', 'email'] }] },
       ],

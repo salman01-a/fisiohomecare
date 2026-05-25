@@ -154,5 +154,73 @@ const uploadMultipleFiles = async (req, res, next) => {
     next(error);
   }
 };
+/**
+ * Stream/proxy an image from GCS or local storage
+ * GET /upload/image?url=<encoded_url>
+ */
+const streamImage = async (req, res, next) => {
+  try {
+    let fileUrl = req.query.url;
+    if (!fileUrl) {
+      throw ApiError.badRequest('Missing "url" query parameter');
+    }
 
-module.exports = { uploadFile, uploadMultipleFiles };
+    // If it's a local file
+    if (fileUrl.startsWith('/uploads/')) {
+      const localPath = path.join(__dirname, '../../', fileUrl);
+      if (!fs.existsSync(localPath)) {
+        throw ApiError.notFound('Local image file not found');
+      }
+      return res.sendFile(localPath);
+    }
+
+    // If it's a GCS URL, stream from bucket
+    if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+      const { getBucket } = require('../config/firebase');
+      const bucket = getBucket();
+      if (!bucket) {
+        // Fallback: try to redirect to the URL directly
+        return res.redirect(fileUrl);
+      }
+
+      // Extract GCS path from URL
+      try {
+        const urlObj = new URL(fileUrl);
+        const bucketName = process.env.GCS_BUCKET_NAME || 'homecare-2b018.appspot.com';
+        const prefix = `/${bucketName}/`;
+        if (urlObj.pathname.startsWith(prefix)) {
+          fileUrl = decodeURIComponent(urlObj.pathname.substring(prefix.length));
+        } else {
+          const parts = urlObj.pathname.split('/o/');
+          if (parts.length > 1) {
+            fileUrl = decodeURIComponent(parts[1].split('?')[0]);
+          } else {
+            fileUrl = decodeURIComponent(urlObj.pathname.split('/').slice(2).join('/'));
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse GCS URL:', fileUrl);
+      }
+
+      const file = bucket.file(fileUrl);
+      const [exists] = await file.exists();
+      if (!exists) {
+        throw ApiError.notFound('Image file not found in storage bucket');
+      }
+
+      const [metadata] = await file.getMetadata();
+      res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+
+      file.createReadStream()
+        .on('error', () => next(ApiError.internal('Error streaming image')))
+        .pipe(res);
+    } else {
+      throw ApiError.badRequest('Invalid image URL');
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { uploadFile, uploadMultipleFiles, streamImage };

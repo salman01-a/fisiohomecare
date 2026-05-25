@@ -5,12 +5,14 @@ const { authenticate, authorize, requireValidatedTherapist } = require('../middl
 const {
   getAllTherapists, getTherapistById, validateTherapist,
   getTherapistSchedules, createSchedule, deleteSchedule,
+  getTherapistReviews,
 } = require('../controllers/therapistController');
 
 router.use(authenticate);
 
 router.get('/', getAllTherapists);
 router.get('/:id', getTherapistById);
+router.get('/:id/reviews', getTherapistReviews);
 
 router.put('/:id/validate', authorize('admin'), [
   body('status').isIn(['active', 'suspended']).withMessage('Status must be active or suspended'),

@@ -1,9 +1,14 @@
-const BASE_URL = 'http://192.168.1.8:3000/v1';
+const BASE_URL = 'http://localhost:3000/v1';
 
 export function getImageUrl(url) {
   if (!url) return url;
   if (url.startsWith('/uploads')) {
-    return `http://192.168.1.8:3000${url}`;
+    return `http://localhost:3000${url}`;
+  }
+  // GCS URLs: proxy through backend to handle auth
+  if (url.startsWith('https://storage.googleapis.com/') || url.startsWith('https://firebasestorage.googleapis.com/')) {
+    const token = localStorage.getItem('token');
+    return `http://localhost:3000/v1/upload/image?url=${encodeURIComponent(url)}&token=${token}`;
   }
   return url;
 }
@@ -87,6 +92,7 @@ export const therapistAPI = {
     request(`/therapists/${id}/schedules/${scheduleId}`, {
       method: 'DELETE',
     }),
+  getReviews: (id) => request(`/therapists/${id}/reviews`),
 };
 
 // Services
@@ -218,5 +224,17 @@ export const nosqlAPI = {
   getNotifications: () => request('/nosql/notifications'),
   markAsRead: (notifId) =>
     request(`/nosql/notifications/${notifId}/read`, { method: 'PUT' }),
+
+  // Activity Logs
+  getActivityLogs: (limit = 50) => request(`/nosql/activity-logs?limit=${limit}`),
+  getMyActivityLogs: (limit = 50) => request(`/nosql/my-activity-logs?limit=${limit}`),
+};
+
+// Patients
+export const patientAPI = {
+  getAll: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/patients${query ? `?${query}` : ''}`);
+  },
 };
 

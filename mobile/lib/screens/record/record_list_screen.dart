@@ -66,9 +66,26 @@ class _RecordListScreenState extends State<RecordListScreen> {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 10),
                       child: ListTile(
-                        leading: CircleAvatar(backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2), child: Text('${r.sessionNumber}', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary))),
-                        title: Text('Sesi ${r.sessionNumber}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(Helpers.formatDateTime(r.checkInAt ?? r.createdAt)),
+                        leading: Container(
+                          width: 44, height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.medical_information_outlined, color: AppColors.primary, size: 22),
+                        ),
+                        title: Text(r.sessionLabel, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (r.serviceName != null && r.serviceName!.isNotEmpty)
+                              Text(r.serviceName!, style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w500)),
+                            if (r.diagnosis != null && r.diagnosis!.isNotEmpty)
+                              Text('Diagnosis: ${r.diagnosis}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            if (r.chiefComplaint != null && r.chiefComplaint!.isNotEmpty)
+                              Text('Keluhan: ${r.chiefComplaint}', style: const TextStyle(fontSize: 12, color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => Navigator.pushNamed(context, AppRoutes.recordDetail, arguments: r.id),
                       ),

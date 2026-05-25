@@ -5,6 +5,7 @@ import 'providers/auth_provider.dart';
 import 'providers/therapist_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/service_provider.dart';
+import 'providers/notification_provider.dart';
 import 'utils/constants.dart';
 import 'utils/routes.dart';
 
@@ -42,6 +43,7 @@ class FisioHomecareApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TherapistProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         title: 'FisioHomecare',

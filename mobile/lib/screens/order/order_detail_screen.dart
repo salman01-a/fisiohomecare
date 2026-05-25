@@ -77,9 +77,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> with WidgetsBindi
           final o = op.selectedOrder;
           if (o == null) return const Center(child: Text('Pesanan tidak ditemukan'));
 
-          // Reload tracking data silently if status changes
+          // Reload tracking data silently if status changes (defer to avoid setState during build)
           if (op.isPolling && _tracking != null && _tracking!['current_status'] != o.status) {
-             _loadTracking(o.id);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _loadTracking(o.id);
+            });
           }
 
           return SingleChildScrollView(
@@ -181,42 +183,69 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> with WidgetsBindi
                   ),
                 const SizedBox(height: 16),
 
-                // === Therapy Record Link ===
+                // === Therapy Record Section ===
                 if (o.therapyRecord != null)
                   Card(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        AppRoutes.recordDetail,
-                        arguments: o.therapyRecord!.id,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 44, height: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.success.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 44, height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(Icons.medical_information_outlined, color: AppColors.success),
                               ),
-                              child: const Icon(Icons.medical_information_outlined, color: AppColors.success),
-                            ),
-                            const SizedBox(width: 14),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Rekam Terapi', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                                  SizedBox(height: 2),
-                                  Text('Lihat detail rekam medis sesi ini', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                                ],
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Rekam Medis — ${o.therapyRecord!.sessionLabel}',
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          if (o.therapyRecord!.chiefComplaint != null && o.therapyRecord!.chiefComplaint!.isNotEmpty)
+                            _row('Keluhan', o.therapyRecord!.chiefComplaint!),
+                          if (o.therapyRecord!.diagnosis != null && o.therapyRecord!.diagnosis!.isNotEmpty)
+                            _row('Diagnosis', o.therapyRecord!.diagnosis!),
+                          if (o.therapyRecord!.actionsTaken != null && o.therapyRecord!.actionsTaken!.isNotEmpty)
+                            _row('Tindakan', o.therapyRecord!.actionsTaken!),
+                          if (o.therapyRecord!.checkInAt != null)
+                            _row('Check-in', Helpers.formatDateTime(o.therapyRecord!.checkInAt)),
+                          if (o.therapyRecord!.checkOutAt != null)
+                            _row('Check-out', Helpers.formatDateTime(o.therapyRecord!.checkOutAt)),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => Navigator.pushNamed(
+                                context,
+                                AppRoutes.recordDetail,
+                                arguments: o.therapyRecord!.id,
+                              ),
+                              icon: const Icon(Icons.visibility_outlined, size: 18),
+                              label: const Text('Lihat Detail Lengkap'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                side: const BorderSide(color: AppColors.primary),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                             ),
-                            const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

@@ -33,4 +33,13 @@ class NosqlService {
   Future<void> markAsRead(String notifId) async {
     await _dio.put(ApiConfig.markNotificationRead(notifId));
   }
+
+  // ============ Activity Logs ============
+
+  /// Get activity logs milik user yang login
+  Future<List<Map<String, dynamic>>> getMyActivityLogs() async {
+    final response = await _dio.get(ApiConfig.myActivityLogs);
+    final List data = response.data['data'] ?? [];
+    return data.cast<Map<String, dynamic>>();
+  }
 }

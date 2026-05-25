@@ -2,6 +2,7 @@ const { Payment, Order, Patient, Therapist, User } = require('../models');
 const { getBucket } = require('../config/firebase');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
+const FirestoreService = require('../services/firestoreService');
 
 const streamPaymentProof = async (req, res, next) => {
   try {
@@ -97,11 +98,27 @@ const initiatePayment = async (req, res, next) => {
     }
 
     const existing = await Payment.findOne({ where: { order_id } });
-    if (existing) throw ApiError.conflict('Payment already exists for this order');
+    let payment;
+    
+    if (existing) {
+      if (existing.status === 'rejected') {
+        // Allow re-upload if previous payment was rejected
+        payment = await existing.update({
+          amount, method, proof_url, status: 'pending', paid_at: new Date()
+        });
+      } else {
+        throw ApiError.conflict('Payment already exists and is not rejected');
+      }
+    } else {
+      payment = await Payment.create({
+        order_id, amount, method, proof_url, status: 'pending', paid_at: new Date(),
+      });
+    }
 
-    const payment = await Payment.create({
-      order_id, amount, method, proof_url, status: 'pending', paid_at: new Date(),
-    });
+    // Log activity
+    try {
+      await FirestoreService.logActivity(req.user.id, req.user.name, 'initiate_payment', `Pembayaran untuk pesanan #${order_id} (${method})`, { order_id, amount, method });
+    } catch (_) {}
 
     return ApiResponse.created(res, payment, 'Payment initiated successfully');
   } catch (error) { next(error); }
@@ -122,6 +139,11 @@ const confirmPayment = async (req, res, next) => {
     if (status === 'confirmed') {
       await Order.update({ status: 'confirmed' }, { where: { id: payment.order_id } });
     }
+
+    // Log activity
+    try {
+      await FirestoreService.logActivity(req.user.id, req.user.name, 'confirm_payment', `Pembayaran pesanan #${req.params.order_id} ${status === 'confirmed' ? 'disetujui' : 'ditolak'}`, { order_id: req.params.order_id, status });
+    } catch (_) {}
 
     return ApiResponse.success(res, payment, `Payment ${status}`);
   } catch (error) { next(error); }

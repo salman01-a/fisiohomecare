@@ -29,8 +29,43 @@ export default function TherapistDashboard() {
   const [submittingRecord, setSubmittingRecord] = useState(false);
   const [recordPhotos, setRecordPhotos] = useState([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
+  const [fullRecord, setFullRecord] = useState(null);
+
+  // Notifications State
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Reviews State
+  const [therapistReviews, setTherapistReviews] = useState(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   useEffect(() => { loadData(); }, [activeTab]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await nosqlAPI.getNotifications();
+        const data = res.data || [];
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.is_read).length);
+      } catch (err) { console.error(err); }
+    };
+    if (user) fetchNotifications();
+  }, [user]);
+
+  useEffect(() => {
+    const loadReviews = async () => {
+      if (activeTab === 'profile' && profile?.id && !therapistReviews) {
+        setReviewsLoading(true);
+        try {
+          const res = await therapistAPI.getReviews(profile.id);
+          setTherapistReviews(res.data);
+        } catch (err) { console.error(err); }
+        setReviewsLoading(false);
+      }
+    };
+    loadReviews();
+  }, [activeTab, profile, therapistReviews]);
 
   const loadData = async () => {
     setLoading(true);
@@ -44,6 +79,11 @@ export default function TherapistDashboard() {
           const res = await therapistAPI.getSchedules(tid);
           setSchedules(res.data || []);
         }
+      } else if (activeTab === 'notifications') {
+        const res = await nosqlAPI.getNotifications();
+        const data = res.data || [];
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.is_read).length);
       }
     } catch (err) { console.error(err); }
     setLoading(false);
@@ -79,6 +119,25 @@ export default function TherapistDashboard() {
       await nosqlAPI.updateTracking(orderId, trackingStatus, notes);
     } catch (err) {
       console.warn('[NoSQL] Tracking update failed:', err.message);
+    }
+  };
+
+  const handleMarkRead = async (notifId) => {
+    try {
+      await nosqlAPI.markAsRead(notifId);
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) { console.error(err); }
+  };
+
+  const handleViewHistoryDetail = async (order) => {
+    setHistoryDetailOrder(order);
+    setFullRecord(null);
+    if (order.therapyRecord?.id) {
+      try {
+        const res = await recordAPI.getById(order.therapyRecord.id);
+        setFullRecord(res.data);
+      } catch (err) { console.error(err); }
     }
   };
 
@@ -162,15 +221,24 @@ export default function TherapistDashboard() {
     { id: 'orders', label: 'Pesanan Saya', icon: '📋' },
     { id: 'schedules', label: 'Jadwal', icon: '📅' },
     { id: 'profile', label: 'Profil', icon: '👤' },
+    { id: 'notifications', label: 'Notifikasi', icon: '🔔' },
   ];
 
   const profileStatusBadge = profile?.status === 'active' ? '✓' : profile?.status === 'pending' ? '⏳' : '';
   
   const rightTopbarContent = (
-    <>
+    <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center' }}>
+      <div className="notification-bell" onClick={() => setActiveTab('notifications')} style={{ cursor: 'pointer', position: 'relative', marginRight: '16px' }}>
+        <span style={{ fontSize: '20px' }}>🔔</span>
+        {unreadCount > 0 && (
+          <span style={{ position: 'absolute', top: '-5px', right: '-10px', background: '#ef4444', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '10px', fontWeight: 'bold' }}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </div>
       {profile?.status === 'pending' && <span className="badge badge--pending">Menunggu Validasi</span>}
       {profile?.status === 'active' && <span className="badge badge--active">Terverifikasi</span>}
-    </>
+    </div>
   );
 
   const activeOrders = orders.filter(o => !['done', 'cancelled'].includes(o.status));
@@ -254,7 +322,7 @@ export default function TherapistDashboard() {
                             <td>{o.schedule?.date || '-'}</td>
                             <td><StatusBadge status={o.status} /></td>
                             <td>
-                              <button className="btn btn--sm btn--primary" onClick={() => setHistoryDetailOrder(o)}>Detail</button>
+                              <button className="btn btn--sm btn--primary" onClick={() => handleViewHistoryDetail(o)}>Detail</button>
                             </td>
                           </tr>
                         ))}
@@ -273,7 +341,7 @@ export default function TherapistDashboard() {
                     <div className="form-row">
                       <div className="form-group">
                         <label>Tanggal</label>
-                        <input type="date" value={newSchedule.date} onChange={e => setNewSchedule(p => ({ ...p, date: e.target.value }))} required />
+                        <input type="date" min={new Date().toISOString().split('T')[0]} value={newSchedule.date} onChange={e => setNewSchedule(p => ({ ...p, date: e.target.value }))} required />
                       </div>
                       <div className="form-group">
                         <label>Jam Mulai</label>
@@ -328,6 +396,64 @@ export default function TherapistDashboard() {
                   <div className="info-row"><span>⭐ Rating</span><span>{profile.rating || '0.00'}</span></div>
                   <div className="info-row"><span>📋 Status</span><StatusBadge status={profile.status} /></div>
                   {profile.validated_at && <div className="info-row"><span>✅ Divalidasi</span><span>{new Date(profile.validated_at).toLocaleDateString('id-ID')}</span></div>}
+                </div>
+              )}
+              {profile && (
+                <div style={{ marginTop: '24px' }}>
+                  <h3 style={{ margin: '0 0 16px', fontSize: '16px', color: '#1e293b' }}>⭐ Ulasan dari Pasien</h3>
+                  {reviewsLoading ? (
+                    <p className="text-muted">Memuat ulasan...</p>
+                  ) : !therapistReviews || therapistReviews.length === 0 ? (
+                    <p className="empty-text">Belum ada ulasan</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {therapistReviews.map(r => (
+                        <div key={r.id} style={{ padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ fontWeight: 'bold' }}>{r.patient?.user?.name || 'Pasien'}</span>
+                            <span style={{ color: '#f59e0b' }}>
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <span key={i} style={{ color: i < r.rating ? '#f59e0b' : '#e2e8f0' }}>★</span>
+                              ))}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }}>
+                            {r.service?.name || r.service_type || '-'} • {new Date(r.created_at).toLocaleDateString('id-ID')}
+                          </div>
+                          {r.rating_comment && <div style={{ fontStyle: 'italic', fontSize: '14px' }}>"{r.rating_comment}"</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'notifications' ? (
+            <div className="section-card">
+              <div className="section-header">
+                <h2>Notifikasi</h2>
+              </div>
+              {notifications.length === 0 ? <p className="empty-text">Belum ada notifikasi</p> : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {notifications.map(n => {
+                    const dateObj = n.created_at?.seconds ? new Date(n.created_at.seconds * 1000) : new Date();
+                    return (
+                      <div key={n.id} style={{ padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: n.is_read ? 'white' : '#f0fdf4' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <h4 style={{ margin: '0 0 4px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {n.type === 'success' ? '✅' : n.type === 'error' ? '❌' : 'ℹ️'} {n.title}
+                            </h4>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>{n.message}</p>
+                            <small style={{ color: '#94a3b8', marginTop: '8px', display: 'block' }}>{dateObj.toLocaleString('id-ID')}</small>
+                          </div>
+                          {!n.is_read && (
+                            <button className="btn btn--sm btn--primary" onClick={() => handleMarkRead(n.id)}>Tandai Dibaca</button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -454,6 +580,50 @@ export default function TherapistDashboard() {
                 <div className="info-row"><span>Keluhan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{historyDetailOrder.therapyRecord.chief_complaint || '-'}</span></div>
                 <div className="info-row"><span>Diagnosis</span><span style={{maxWidth:'200px',textAlign:'right'}}>{historyDetailOrder.therapyRecord.diagnosis || '-'}</span></div>
                 <div className="info-row"><span>Tindakan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{historyDetailOrder.therapyRecord.actions_taken || '-'}</span></div>
+
+                {(() => {
+                  const rec = fullRecord || historyDetailOrder.therapyRecord;
+                  const photos = rec.photo_urls || [];
+                  if (photos.length === 0) return null;
+                  return (
+                    <div style={{ marginTop: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>📸 Foto Dokumentasi Terapis ({photos.length})</span>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                        {photos.map((url, i) => (
+                          <img key={i} src={getImageUrl(url)} alt={`photo-${i}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* NoSQL Data in History */}
+            {fullRecord?.nosql_details && (
+              <div className="section-card" style={{ margin: 0, borderLeft: '3px solid #f59e0b' }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  🔥 Catatan Fleksibel <span style={{ fontSize: 10, background: '#fef3c7', color: '#d97706', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>NoSQL</span>
+                </h3>
+                {fullRecord.nosql_details.progress_rating != null && (
+                  <div className="info-row">
+                    <span>Progres Pemulihan</span>
+                    <span style={{ fontWeight: 700, color: '#6366f1' }}>{fullRecord.nosql_details.progress_rating}/10</span>
+                  </div>
+                )}
+                {fullRecord.nosql_details.flexible_notes && (
+                  <div className="info-row"><span>Catatan Tambahan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{fullRecord.nosql_details.flexible_notes}</span></div>
+                )}
+                {fullRecord.nosql_details.attachments?.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>📎 Lampiran ({fullRecord.nosql_details.attachments.length})</span>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                      {fullRecord.nosql_details.attachments.map((url, i) => (
+                        <img key={i} src={getImageUrl(url)} alt={`attachment-${i}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

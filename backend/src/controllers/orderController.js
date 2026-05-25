@@ -2,6 +2,7 @@ const { Order, Patient, Therapist, Schedule, User, Payment, TherapyRecord, Servi
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 const { Op } = require('sequelize');
+const FirestoreService = require('../services/firestoreService');
 
 /**
  * List all orders (with filters)
@@ -143,6 +144,26 @@ const createOrder = async (req, res, next) => {
       ],
     });
 
+    // Send notification to therapist
+    try {
+      const therapistData = await Therapist.findByPk(therapist_id);
+      if (therapistData) {
+        await FirestoreService.sendUserNotification(
+          therapistData.user_id,
+          '🆕 Pesanan Baru',
+          `Ada pesanan baru pada tanggal ${schedule.date}. Silakan cek jadwal Anda.`,
+          'info'
+        );
+      }
+    } catch (notifErr) {
+      console.warn('[Firestore] Failed to send new order notification:', notifErr.message);
+    }
+
+    // Log activity
+    try {
+      await FirestoreService.logActivity(req.user.id, req.user.name, 'create_order', `Pesanan baru #${order.id} dibuat`, { order_id: order.id, therapist_id, service_type });
+    } catch (_) {}
+
     return ApiResponse.created(res, fullOrder, 'Order created successfully');
   } catch (error) {
     await t.rollback();
@@ -235,11 +256,15 @@ const updateOrderStatus = async (req, res, next) => {
 
     await order.update({ status });
 
-    // If cancelled, free up the schedule slot
+    // If cancelled, free up the schedule slot and reject associated payments
     if (status === 'cancelled') {
       await Schedule.update(
         { is_booked: false },
         { where: { id: order.schedule_id } }
+      );
+      await Payment.update(
+        { status: 'rejected' },
+        { where: { order_id: order.id, status: ['pending', 'confirmed'] } }
       );
     }
 
@@ -274,11 +299,29 @@ const updateOrderStatus = async (req, res, next) => {
         const type = status === 'cancelled' ? 'error' : status === 'done' ? 'success' : 'info';
         await FirestoreService.sendPatientNotification(order.patient_id, title, message, type);
       }
+
+      // Notify therapist (user-based notifications)
+      const therapistNotifMap = {
+        confirmed: { title: '✅ Pesanan Dikonfirmasi', message: 'Pesanan telah dikonfirmasi oleh admin. Harap siapkan jadwal kunjungan.' },
+        cancelled: { title: '❌ Pesanan Dibatalkan', message: 'Pesanan telah dibatalkan.' },
+      };
+      if (therapistNotifMap[status]) {
+        const therapistData = await Therapist.findByPk(order.therapist_id);
+        if (therapistData) {
+          const { title, message } = therapistNotifMap[status];
+          await FirestoreService.sendUserNotification(therapistData.user_id, title, message, status === 'cancelled' ? 'error' : 'info');
+        }
+      }
     } catch (firestoreErr) {
       // Firestore errors should not block the main response
       console.warn('[Firestore] Failed to sync tracking/notification:', firestoreErr.message);
     }
     // =================================================================
+
+    // Log activity
+    try {
+      await FirestoreService.logActivity(req.user.id, req.user.name, 'update_order_status', `Status pesanan #${order.id} diubah ke '${status}'`, { order_id: order.id, status });
+    } catch (_) {}
 
     return ApiResponse.success(res, order, `Order status updated to '${status}'`);
   } catch (error) {
@@ -311,7 +354,18 @@ const cancelOrder = async (req, res, next) => {
 
     await order.update({ status: 'cancelled' }, { transaction: t });
 
+    // Cancel associated payment if exists
+    await Payment.update(
+      { status: 'rejected' },
+      { where: { order_id: order.id, status: ['pending', 'confirmed'] }, transaction: t }
+    );
+
     await t.commit();
+
+    // Log activity
+    try {
+      await FirestoreService.logActivity(req.user.id, req.user.name, 'cancel_order', `Pesanan #${order.id} dibatalkan`, { order_id: order.id });
+    } catch (_) {}
 
     return ApiResponse.success(res, order, 'Order cancelled successfully');
   } catch (error) {
@@ -374,6 +428,11 @@ const rateOrder = async (req, res, next) => {
       { rating: Math.round(avgRating * 100) / 100 },
       { where: { id: order.therapist_id } }
     );
+
+    // Log activity
+    try {
+      await FirestoreService.logActivity(req.user.id, req.user.name, 'rate_order', `Rating ${rating}⭐ untuk pesanan #${order.id}`, { order_id: order.id, rating });
+    } catch (_) {}
 
     return ApiResponse.success(res, {
       rating: order.rating,

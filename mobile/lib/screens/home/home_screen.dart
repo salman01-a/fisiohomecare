@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/therapist_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
 import '../../widgets/order_card.dart';
@@ -11,6 +12,7 @@ import '../../widgets/loading_indicator.dart';
 import '../therapist/therapist_list_screen.dart';
 import '../order/order_list_screen.dart';
 import '../profile/profile_screen.dart';
+import '../notification/notification_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,17 +23,82 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    _HomeTab(),
-    TherapistListScreen(embedded: true),
-    OrderListScreen(embedded: true),
-    ProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Start polling notifications
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notifProvider = Provider.of<NotificationProvider>(context, listen: false);
+      notifProvider.startPolling();
+      // Set callback untuk snackbar notifikasi baru
+      notifProvider.onNewNotification = (title, message) {
+        if (mounted) {
+          // Defer snackbar to after the build phase to avoid "widget tree locked" error
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.notifications_active, color: Colors.white, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                          const SizedBox(height: 2),
+                          Text(message, style: const TextStyle(fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.all(16),
+                duration: const Duration(seconds: 4),
+                action: SnackBarAction(
+                  label: 'Lihat',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen()));
+                  },
+                ),
+              ),
+            );
+          });
+        }
+      };
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    // 4 tabs: Beranda, Terapis, Pesanan, Profil
+    final List<Widget> pages = const [
+      _HomeTab(),
+      TherapistListScreen(embedded: true),
+      OrderListScreen(embedded: true),
+      ProfileScreen(),
+    ];
+
     return Scaffold(
-      body: _pages[_currentIndex],
+      body: pages[_currentIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -41,6 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (i) => setState(() => _currentIndex = i),
+          type: BottomNavigationBarType.fixed,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Beranda'),
             BottomNavigationBarItem(icon: Icon(Icons.people_rounded), label: 'Terapis'),
@@ -78,6 +146,7 @@ class _HomeTabState extends State<_HomeTab> {
         onRefresh: () async {
           await Provider.of<TherapistProvider>(context, listen: false).fetchTherapists();
           await Provider.of<OrderProvider>(context, listen: false).fetchOrders();
+          await Provider.of<NotificationProvider>(context, listen: false).fetchNotifications();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -85,7 +154,7 @@ class _HomeTabState extends State<_HomeTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Greeting
+              // Greeting + notification bell with badge
               Row(
                 children: [
                   Expanded(
@@ -98,14 +167,44 @@ class _HomeTabState extends State<_HomeTab> {
                       ],
                     ),
                   ),
-                  Container(
-                    width: 48, height: 48,
-                    decoration: BoxDecoration(color: AppColors.primaryLight.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(14)),
-                    child: IconButton(
-                      icon: const Icon(Icons.notifications_outlined, color: AppColors.primary),
-                      onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
-                      tooltip: 'Notifikasi',
-                    ),
+                  Consumer<NotificationProvider>(
+                    builder: (ctx, notifProv, _) {
+                      return Container(
+                        width: 48, height: 48,
+                        decoration: BoxDecoration(color: AppColors.primaryLight.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(14)),
+                        child: Stack(
+                          children: [
+                            Center(
+                              child: IconButton(
+                                icon: const Icon(Icons.notifications_outlined, color: AppColors.primary),
+                                onPressed: () {
+                                  // Navigate to notification screen (push route)
+                                  Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen()));
+                                },
+                                tooltip: 'Notifikasi',
+                              ),
+                            ),
+                            if (notifProv.unreadCount > 0)
+                              Positioned(
+                                right: 6, top: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.error,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                                  child: Text(
+                                    notifProv.unreadCount > 9 ? '9+' : notifProv.unreadCount.toString(),
+                                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

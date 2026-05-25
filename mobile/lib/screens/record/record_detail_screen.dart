@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/record_service.dart';
-import '../../services/nosql_service.dart';
 import '../../models/therapy_record.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
@@ -18,6 +17,10 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
   TherapyRecord? _record;
   bool _isLoading = true;
 
+  // Image URLs with token (resolved async)
+  List<String> _resolvedPhotoUrls = [];
+  List<String> _resolvedAttachmentUrls = [];
+
   @override
   void initState() {
     super.initState();
@@ -30,11 +33,42 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
   Future<void> _load(String id) async {
     try {
       final r = await _service.getById(id);
-      if (mounted) setState(() { _record = r; _isLoading = false; });
+      if (mounted) {
+        setState(() { _record = r; _isLoading = false; });
+        // Resolve image URLs with token
+        _resolveImageUrls(r);
+      }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  Future<void> _resolveImageUrls(TherapyRecord r) async {
+    // Resolve photo URLs
+    final resolvedPhotos = <String>[];
+    for (final url in r.photoUrls) {
+      final resolved = await ApiConfig.getImageUrlWithToken(url);
+      if (resolved.isNotEmpty) resolvedPhotos.add(resolved);
+    }
+
+    // Resolve NoSQL attachment URLs
+    final resolvedAttachments = <String>[];
+    if (r.nosqlDetails != null) {
+      for (final url in r.nosqlDetails!.attachments) {
+        final resolved = await ApiConfig.getImageUrlWithToken(url);
+        if (resolved.isNotEmpty) resolvedAttachments.add(resolved);
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _resolvedPhotoUrls = resolvedPhotos;
+        _resolvedAttachmentUrls = resolvedAttachments;
+      });
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -49,16 +83,22 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Session header
+                      // Session header with date
                       Center(
                         child: Container(
                           width: 64, height: 64,
                           decoration: BoxDecoration(color: AppColors.primaryLight.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(18)),
-                          child: Center(child: Text('${_record!.sessionNumber}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.primary))),
+                          child: const Center(child: Icon(Icons.medical_information_outlined, color: AppColors.primary, size: 32)),
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Center(child: Text('Sesi ${_record!.sessionNumber}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
+                      Center(
+                        child: Text(
+                          _record!.sessionLabel,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                       const SizedBox(height: 24),
 
                       // === SQL Data: Rekam Terapi Utama ===
@@ -70,8 +110,8 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
                       if (_record!.actionsTaken != null) _tile('Tindakan', _record!.actionsTaken!),
 
                       // Foto dokumentasi dari terapis (SQL)
-                      if (_record!.photoUrls.isNotEmpty)
-                        _attachmentsSection(_record!.photoUrls, title: 'Foto Dokumentasi Terapis'),
+                      if (_resolvedPhotoUrls.isNotEmpty)
+                        _attachmentsSection(_resolvedPhotoUrls, title: 'Foto Dokumentasi Terapis'),
 
                       // === NoSQL Data: Catatan Fleksibel, Progres, Foto ===
                       if (_record!.nosqlDetails != null) ...[
@@ -88,8 +128,8 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
                           _tile('Catatan Tambahan', _record!.nosqlDetails!.flexibleNotes!),
 
                         // Foto/Dokumen Pendukung
-                        if (_record!.nosqlDetails!.attachments.isNotEmpty)
-                          _attachmentsSection(_record!.nosqlDetails!.attachments),
+                        if (_resolvedAttachmentUrls.isNotEmpty)
+                          _attachmentsSection(_resolvedAttachmentUrls),
                       ],
 
                       // Info ketika NoSQL belum ada
@@ -219,8 +259,8 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
     );
   }
 
-  /// Grid foto/dokumen pendukung
-  Widget _attachmentsSection(List<String> attachments, {String title = 'Foto/Dokumen Pendukung'}) {
+  /// Grid foto/dokumen pendukung (sudah pakai URL dengan token)
+  Widget _attachmentsSection(List<String> resolvedUrls, {String title = 'Foto/Dokumen Pendukung'}) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -228,7 +268,7 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$title (${attachments.length})', style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+            Text('$title (${resolvedUrls.length})', style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),
             GridView.builder(
               shrinkWrap: true,
@@ -238,14 +278,14 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
               ),
-              itemCount: attachments.length,
+              itemCount: resolvedUrls.length,
               itemBuilder: (ctx, i) {
                 return GestureDetector(
-                  onTap: () => _showFullImage(context, ApiConfig.getImageUrl(attachments[i])),
+                  onTap: () => _showFullImage(context, resolvedUrls[i]),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: Image.network(
-                      ApiConfig.getImageUrl(attachments[i]),
+                      resolvedUrls[i],
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
                         decoration: BoxDecoration(

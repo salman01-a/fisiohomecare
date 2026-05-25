@@ -10,7 +10,6 @@ module.exports = (sequelize) => {
     order_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      unique: true,
       references: {
         model: 'orders',
         key: 'id',
@@ -76,7 +75,7 @@ module.exports = (sequelize) => {
     timestamps: true,
     underscored: true,
     indexes: [
-      { unique: true, fields: ['order_id'] },
+      { unique: true, fields: ['order_id', 'session_number'] },
       { fields: ['therapist_id'] },
       { fields: ['patient_id'] },
     ],

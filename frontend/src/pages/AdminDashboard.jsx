@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { dashboardAPI, therapistAPI, serviceAPI, orderAPI, paymentAPI, nosqlAPI, recordAPI, getImageUrl } from '../services/api';
+import { dashboardAPI, therapistAPI, serviceAPI, orderAPI, paymentAPI, nosqlAPI, recordAPI, patientAPI, getImageUrl } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const [therapists, setTherapists] = useState([]);
   const [services, setServices] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
@@ -45,7 +46,32 @@ export default function AdminDashboard() {
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [newSchedule, setNewSchedule] = useState({ date: '', start_time: '', end_time: '' });
 
+  // Notifications State
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Reviews Modal State
+  const [selectedTherapistReviews, setSelectedTherapistReviews] = useState(null);
+  const [therapistReviews, setTherapistReviews] = useState(null);
+  const [reviewsSummary, setReviewsSummary] = useState(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  // Activity Logs State
+  const [activityLogs, setActivityLogs] = useState([]);
+
   useEffect(() => { loadData(); }, [activeTab]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await nosqlAPI.getNotifications();
+        const data = res.data || [];
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.is_read).length);
+      } catch (err) { console.error(err); }
+    };
+    fetchNotifications();
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -71,6 +97,17 @@ export default function AdminDashboard() {
         const params = paymentFilter ? { status: paymentFilter } : {};
         const res = await paymentAPI.getAll(params);
         setPayments(res.data || []);
+      } else if (activeTab === 'patients') {
+        const res = await patientAPI.getAll();
+        setPatients(res.data || []);
+      } else if (activeTab === 'notifications') {
+        const res = await nosqlAPI.getNotifications();
+        const data = res.data || [];
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.is_read).length);
+      } else if (activeTab === 'activity-logs') {
+        const res = await nosqlAPI.getActivityLogs();
+        setActivityLogs(res.data || []);
       }
     } catch (err) { console.error(err); }
     setLoading(false);
@@ -218,6 +255,25 @@ export default function AdminDashboard() {
     } catch (err) { toast.error(err.message); }
   };
 
+  const handleViewReviews = async (therapist) => {
+    setSelectedTherapistReviews(therapist);
+    setReviewsLoading(true);
+    try {
+      const res = await therapistAPI.getReviews(therapist.id);
+      setTherapistReviews(res.data);
+      setReviewsSummary(res.pagination?.summary || null);
+    } catch (err) { console.error(err); }
+    setReviewsLoading(false);
+  };
+
+  const handleMarkRead = async (notifId) => {
+    try {
+      await nosqlAPI.markAsRead(notifId);
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) { console.error(err); }
+  };
+
   const formatCurrency = (val) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0);
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
 
@@ -225,9 +281,25 @@ export default function AdminDashboard() {
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'orders', label: 'Pesanan', icon: '📋' },
     { id: 'payments', label: 'Pembayaran', icon: '💳' },
+    { id: 'patients', label: 'Pasien', icon: '🧑‍🤝‍🧑' },
     { id: 'therapists', label: 'Terapis', icon: '👨‍⚕️' },
     { id: 'services', label: 'Layanan', icon: '🏥' },
+    { id: 'notifications', label: 'Notifikasi', icon: '🔔' },
+    { id: 'activity-logs', label: 'Log Aktivitas', icon: '📜' },
   ];
+
+  const rightTopbarContent = (
+    <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center' }}>
+      <div className="notification-bell" onClick={() => setActiveTab('notifications')} style={{ cursor: 'pointer', position: 'relative', marginRight: '16px' }}>
+        <span style={{ fontSize: '20px' }}>🔔</span>
+        {unreadCount > 0 && (
+          <span style={{ position: 'absolute', top: '-5px', right: '-10px', background: '#ef4444', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '10px', fontWeight: 'bold' }}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="dashboard">
@@ -244,6 +316,7 @@ export default function AdminDashboard() {
         <Topbar 
           title={tabs.find(t => t.id === activeTab)?.label} 
           setSidebarOpen={setSidebarOpen} 
+          rightContent={rightTopbarContent}
         />
 
         <div className="content">
@@ -367,6 +440,32 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+          ) : activeTab === 'patients' ? (
+            <div className="section-card">
+              <div className="section-header">
+                <h2>Daftar Pasien</h2>
+              </div>
+              {patients.length === 0 ? <p className="empty-text">Belum ada pasien terdaftar</p> : (
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead><tr><th>Nama</th><th>Email</th><th>Telepon</th><th>Alamat</th><th>Kontak Darurat</th><th>Tgl Daftar</th></tr></thead>
+                    <tbody>
+                      {patients.map(p => (
+                        <tr key={p.id}>
+                          <td className="text-bold">{p.user?.name || '-'}</td>
+                          <td>{p.user?.email || '-'}</td>
+                          <td>{p.user?.phone || '-'}</td>
+                          <td className="td-truncate" style={{maxWidth: '200px'}}>{p.address || '-'}</td>
+                          <td>{p.emergency_contact || '-'}</td>
+                          <td>{p.user?.created_at ? new Date(p.user.created_at).toLocaleDateString('id-ID') : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
           ) : activeTab === 'therapists' ? (
             <div className="section-card">
               {therapists.length === 0 ? <p className="empty-text">Belum ada terapis</p> : (
@@ -388,6 +487,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="therapist-card-actions">
                         <button className="btn btn--sm btn--primary" onClick={() => handleViewSchedules(t)}>📅 Jadwal</button>
+                        <button className="btn btn--sm btn--primary" onClick={() => handleViewReviews(t)}>⭐ Ulasan</button>
                         {t.status === 'pending' && (
                           <>
                             <button className="btn btn--sm btn--primary" onClick={() => handleValidate(t.id, 'active')}>Validasi</button>
@@ -435,6 +535,70 @@ export default function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'notifications' ? (
+            <div className="section-card">
+              <div className="section-header">
+                <h2>Notifikasi</h2>
+              </div>
+              {notifications.length === 0 ? <p className="empty-text">Belum ada notifikasi</p> : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {notifications.map(n => {
+                    const dateObj = n.created_at?.seconds ? new Date(n.created_at.seconds * 1000) : new Date();
+                    return (
+                      <div key={n.id} style={{ padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: n.is_read ? 'white' : '#f0fdf4' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <h4 style={{ margin: '0 0 4px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {n.type === 'success' ? '✅' : n.type === 'error' ? '❌' : 'ℹ️'} {n.title}
+                            </h4>
+                            <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>{n.message}</p>
+                            <small style={{ color: '#94a3b8', marginTop: '8px', display: 'block' }}>{dateObj.toLocaleString('id-ID')}</small>
+                          </div>
+                          {!n.is_read && (
+                            <button className="btn btn--sm btn--primary" onClick={() => handleMarkRead(n.id)}>Tandai Dibaca</button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'activity-logs' ? (
+            <div className="section-card">
+              <div className="section-header">
+                <h2>Log Aktivitas</h2>
+                <span className="text-muted" style={{ fontSize: '13px' }}>🔥 Data dari Firestore (NoSQL)</span>
+              </div>
+              {activityLogs.length === 0 ? <p className="empty-text">Belum ada log aktivitas</p> : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {activityLogs.map(log => {
+                    const dateObj = log.created_at?.seconds ? new Date(log.created_at.seconds * 1000) : (log.created_at ? new Date(log.created_at) : new Date());
+                    const actionIcons = {
+                      create_order: '📦', update_order_status: '🔄', cancel_order: '❌',
+                      rate_order: '⭐', validate_therapist: '✅', initiate_payment: '💳',
+                      confirm_payment: '💰',
+                    };
+                    return (
+                      <div key={log.id} style={{ padding: '14px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flex: 1 }}>
+                          <span style={{ fontSize: '20px' }}>{actionIcons[log.action] || '📝'}</span>
+                          <div>
+                            <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '14px' }}>{log.description}</div>
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                              oleh <strong>{log.user_name || 'System'}</strong> • {dateObj.toLocaleString('id-ID')}
+                            </div>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', background: '#f1f5f9', color: '#64748b', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                          {log.action?.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -692,7 +856,7 @@ export default function AdminDashboard() {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Tanggal</label>
-                    <input type="date" value={newSchedule.date} onChange={e => setNewSchedule(p => ({ ...p, date: e.target.value }))} required />
+                    <input type="date" min={new Date().toISOString().split('T')[0]} value={newSchedule.date} onChange={e => setNewSchedule(p => ({ ...p, date: e.target.value }))} required />
                   </div>
                   <div className="form-group">
                     <label>Jam Mulai</label>
@@ -728,6 +892,48 @@ export default function AdminDashboard() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Therapist Reviews Modal */}
+      <Modal
+        isOpen={!!selectedTherapistReviews}
+        onClose={() => { setSelectedTherapistReviews(null); setTherapistReviews(null); setReviewsSummary(null); }}
+        title={`Ulasan: ${selectedTherapistReviews?.user?.name || 'Terapis'}`}
+      >
+        {reviewsLoading ? (
+          <p className="text-muted" style={{ textAlign: 'center' }}>Memuat ulasan...</p>
+        ) : !therapistReviews || therapistReviews.length === 0 ? (
+          <p className="empty-text">Belum ada ulasan</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="section-card" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#f59e0b' }}>
+                ⭐ {reviewsSummary?.avgRating?.toFixed(2) || '0.00'}
+              </div>
+              <div>
+                <div style={{ fontSize: '14px', color: '#64748b' }}>Dari total {reviewsSummary?.totalReviews || 0} ulasan pasien</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {therapistReviews.map(r => (
+                <div key={r.id} style={{ padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 'bold' }}>{r.patient?.user?.name || 'Pasien'}</span>
+                    <span style={{ color: '#f59e0b' }}>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <span key={i} style={{ color: i < r.rating ? '#f59e0b' : '#e2e8f0' }}>★</span>
+                      ))}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }}>
+                    {r.service?.name || r.service_type || '-'} • {new Date(r.created_at).toLocaleDateString('id-ID')}
+                  </div>
+                  {r.rating_comment && <div style={{ fontStyle: 'italic', fontSize: '14px' }}>"{r.rating_comment}"</div>}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </Modal>
