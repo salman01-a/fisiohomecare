@@ -46,9 +46,7 @@ export default function AdminDashboard() {
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [newSchedule, setNewSchedule] = useState({ date: '', start_time: '', end_time: '' });
 
-  // Notifications State
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+
 
   // Reviews Modal State
   const [selectedTherapistReviews, setSelectedTherapistReviews] = useState(null);
@@ -61,17 +59,7 @@ export default function AdminDashboard() {
 
   useEffect(() => { loadData(); }, [activeTab]);
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const res = await nosqlAPI.getNotifications();
-        const data = res.data || [];
-        setNotifications(data);
-        setUnreadCount(data.filter(n => !n.is_read).length);
-      } catch (err) { console.error(err); }
-    };
-    fetchNotifications();
-  }, []);
+
 
   const loadData = async () => {
     setLoading(true);
@@ -100,11 +88,7 @@ export default function AdminDashboard() {
       } else if (activeTab === 'patients') {
         const res = await patientAPI.getAll();
         setPatients(res.data || []);
-      } else if (activeTab === 'notifications') {
-        const res = await nosqlAPI.getNotifications();
-        const data = res.data || [];
-        setNotifications(data);
-        setUnreadCount(data.filter(n => !n.is_read).length);
+
       } else if (activeTab === 'activity-logs') {
         const res = await nosqlAPI.getActivityLogs();
         setActivityLogs(res.data || []);
@@ -266,13 +250,7 @@ export default function AdminDashboard() {
     setReviewsLoading(false);
   };
 
-  const handleMarkRead = async (notifId) => {
-    try {
-      await nosqlAPI.markAsRead(notifId);
-      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (err) { console.error(err); }
-  };
+
 
   const formatCurrency = (val) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0);
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
@@ -284,22 +262,11 @@ export default function AdminDashboard() {
     { id: 'patients', label: 'Pasien', icon: '🧑‍🤝‍🧑' },
     { id: 'therapists', label: 'Terapis', icon: '👨‍⚕️' },
     { id: 'services', label: 'Layanan', icon: '🏥' },
-    { id: 'notifications', label: 'Notifikasi', icon: '🔔' },
+
     { id: 'activity-logs', label: 'Log Aktivitas', icon: '📜' },
   ];
 
-  const rightTopbarContent = (
-    <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center' }}>
-      <div className="notification-bell" onClick={() => setActiveTab('notifications')} style={{ cursor: 'pointer', position: 'relative', marginRight: '16px' }}>
-        <span style={{ fontSize: '20px' }}>🔔</span>
-        {unreadCount > 0 && (
-          <span style={{ position: 'absolute', top: '-5px', right: '-10px', background: '#ef4444', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '10px', fontWeight: 'bold' }}>
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </div>
-    </div>
-  );
+
 
   return (
     <div className="dashboard">
@@ -315,8 +282,7 @@ export default function AdminDashboard() {
       <main className="main-content">
         <Topbar 
           title={tabs.find(t => t.id === activeTab)?.label} 
-          setSidebarOpen={setSidebarOpen} 
-          rightContent={rightTopbarContent}
+          setSidebarOpen={setSidebarOpen}
         />
 
         <div className="content">
@@ -538,40 +504,12 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
-          ) : activeTab === 'notifications' ? (
-            <div className="section-card">
-              <div className="section-header">
-                <h2>Notifikasi</h2>
-              </div>
-              {notifications.length === 0 ? <p className="empty-text">Belum ada notifikasi</p> : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {notifications.map(n => {
-                    const dateObj = n.created_at?.seconds ? new Date(n.created_at.seconds * 1000) : new Date();
-                    return (
-                      <div key={n.id} style={{ padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: n.is_read ? 'white' : '#f0fdf4' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div>
-                            <h4 style={{ margin: '0 0 4px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              {n.type === 'success' ? '✅' : n.type === 'error' ? '❌' : 'ℹ️'} {n.title}
-                            </h4>
-                            <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>{n.message}</p>
-                            <small style={{ color: '#94a3b8', marginTop: '8px', display: 'block' }}>{dateObj.toLocaleString('id-ID')}</small>
-                          </div>
-                          {!n.is_read && (
-                            <button className="btn btn--sm btn--primary" onClick={() => handleMarkRead(n.id)}>Tandai Dibaca</button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+
           ) : activeTab === 'activity-logs' ? (
             <div className="section-card">
               <div className="section-header">
                 <h2>Log Aktivitas</h2>
-                <span className="text-muted" style={{ fontSize: '13px' }}>🔥 Data dari Firestore (NoSQL)</span>
+
               </div>
               {activityLogs.length === 0 ? <p className="empty-text">Belum ada log aktivitas</p> : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -677,10 +615,10 @@ export default function AdminDashboard() {
             {/* NoSQL Visit Tracking Panel */}
             <div className="section-card" style={{ margin: 0, borderLeft: '3px solid #f59e0b' }}>
               <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6 }}>
-                🔥 Tracking Kunjungan <span style={{ fontSize: 10, background: '#fef3c7', color: '#d97706', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>NoSQL</span>
+                📍 Tracking Kunjungan
               </h3>
               {trackingLoading ? (
-                <p style={{ color: '#94a3b8', fontSize: 13 }}>Memuat data Firestore...</p>
+                <p style={{ color: '#94a3b8', fontSize: 13 }}>Memuat data tracking...</p>
               ) : !orderTracking ? (
                 <p style={{ color: '#94a3b8', fontSize: 13 }}>Belum ada data tracking. Tracking otomatis tersimpan saat status order berubah.</p>
               ) : (
@@ -766,13 +704,13 @@ export default function AdminDashboard() {
             {/* NoSQL Therapy Details */}
             {fullRecordLoading && (
               <div className="section-card" style={{ margin: 0, borderLeft: '3px solid #f59e0b' }}>
-                <p style={{ color: '#94a3b8', fontSize: 13 }}>Memuat data NoSQL...</p>
+                <p style={{ color: '#94a3b8', fontSize: 13 }}>Memuat data...</p>
               </div>
             )}
             {fullRecord?.nosql_details && (
               <div className="section-card" style={{ margin: 0, borderLeft: '3px solid #f59e0b' }}>
                 <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  🔥 Catatan Fleksibel <span style={{ fontSize: 10, background: '#fef3c7', color: '#d97706', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>NoSQL</span>
+                  📝 Catatan Tambahan
                 </h3>
                 {fullRecord.nosql_details.progress_rating != null && (
                   <div className="info-row">

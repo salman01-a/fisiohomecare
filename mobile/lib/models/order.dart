@@ -91,10 +91,14 @@ class Order {
       payment: json['payment'] != null
           ? Payment.fromJson(json['payment'])
           : null,
-      therapyRecord: json['therapy_record'] != null
-          ? TherapyRecord.fromJson(json['therapy_record'])
+      therapyRecord: (json['therapyRecord'] ?? json['therapy_record']) != null
+          ? TherapyRecord.fromJson(
+              json['therapyRecord'] ?? json['therapy_record'],
+            )
           : null,
-      rating: json['rating'] != null ? int.tryParse(json['rating'].toString()) : null,
+      rating: json['rating'] != null
+          ? int.tryParse(json['rating'].toString())
+          : null,
       ratingComment: json['rating_comment'],
     );
   }

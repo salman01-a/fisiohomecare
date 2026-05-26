@@ -40,7 +40,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
       await _paymentService.initiate(orderId: order.id, amount: order.service?.price ?? 0, method: _method, proofUrl: proofUrl);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pembayaran berhasil dikirim!'), backgroundColor: AppColors.success));
+      final msg = _method == 'cash' ? 'Pembayaran tunai dikonfirmasi otomatis!' : 'Pembayaran berhasil dikirim!';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: AppColors.success));
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;

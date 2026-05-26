@@ -189,7 +189,7 @@ export default function TherapistDashboard() {
       setRecordPhotos([]);
       setPhotoPreviewUrls([]);
       loadData();
-      toast.success('Sesi berhasil diselesaikan, Rekam Medis & data NoSQL tersimpan!');
+      toast.success('Sesi berhasil diselesaikan, Rekam Medis tersimpan!');
     } catch (err) { toast.error(err.message); }
     finally { setSubmittingRecord(false); }
   };
@@ -468,7 +468,7 @@ export default function TherapistDashboard() {
       >
         <form onSubmit={submitTherapyRecord}>
           {/* ── SQL Fields ── */}
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>📋 Data Utama (SQL)</p>
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>📋 Data Utama</p>
           <div className="form-group" style={{ marginBottom: '12px' }}>
             <label>Keluhan Utama</label>
             <textarea 
@@ -502,7 +502,7 @@ export default function TherapistDashboard() {
 
           {/* ── NoSQL Fields (Firestore) ── */}
           <div style={{ borderTop: '1px solid #e2e8f0', margin: '16px 0 12px' }} />
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>🔥 Data Fleksibel (NoSQL / Firestore)</p>
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>📝 Data Tambahan</p>
           <div className="form-group" style={{ marginBottom: '12px' }}>
             <label>Catatan Tambahan</label>
             <textarea
@@ -576,7 +576,7 @@ export default function TherapistDashboard() {
 
             {historyDetailOrder.therapyRecord && (
               <div className="section-card" style={{ margin: 0 }}>
-                <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#64748b' }}>📝 Rekam Medis (SQL)</h3>
+                <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#64748b' }}>📝 Rekam Medis</h3>
                 <div className="info-row"><span>Keluhan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{historyDetailOrder.therapyRecord.chief_complaint || '-'}</span></div>
                 <div className="info-row"><span>Diagnosis</span><span style={{maxWidth:'200px',textAlign:'right'}}>{historyDetailOrder.therapyRecord.diagnosis || '-'}</span></div>
                 <div className="info-row"><span>Tindakan</span><span style={{maxWidth:'200px',textAlign:'right'}}>{historyDetailOrder.therapyRecord.actions_taken || '-'}</span></div>
@@ -603,7 +603,7 @@ export default function TherapistDashboard() {
             {fullRecord?.nosql_details && (
               <div className="section-card" style={{ margin: 0, borderLeft: '3px solid #f59e0b' }}>
                 <h3 style={{ margin: '0 0 8px', fontSize: '14px', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  🔥 Catatan Fleksibel <span style={{ fontSize: 10, background: '#fef3c7', color: '#d97706', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>NoSQL</span>
+                  📝 Catatan Tambahan
                 </h3>
                 {fullRecord.nosql_details.progress_rating != null && (
                   <div className="info-row">

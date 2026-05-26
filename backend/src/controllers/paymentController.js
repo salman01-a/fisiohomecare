@@ -97,6 +97,9 @@ const initiatePayment = async (req, res, next) => {
       throw ApiError.badRequest(`Cannot pay for an order with status '${order.status}'`);
     }
 
+    // Cash payments are automatically confirmed (no admin approval needed)
+    const paymentStatus = method === 'cash' ? 'confirmed' : 'pending';
+
     const existing = await Payment.findOne({ where: { order_id } });
     let payment;
     
@@ -104,15 +107,20 @@ const initiatePayment = async (req, res, next) => {
       if (existing.status === 'rejected') {
         // Allow re-upload if previous payment was rejected
         payment = await existing.update({
-          amount, method, proof_url, status: 'pending', paid_at: new Date()
+          amount, method, proof_url, status: paymentStatus, paid_at: new Date()
         });
       } else {
         throw ApiError.conflict('Payment already exists and is not rejected');
       }
     } else {
       payment = await Payment.create({
-        order_id, amount, method, proof_url, status: 'pending', paid_at: new Date(),
+        order_id, amount, method, proof_url, status: paymentStatus, paid_at: new Date(),
       });
+    }
+
+    // If cash payment, auto-confirm the order as well
+    if (method === 'cash') {
+      await Order.update({ status: 'confirmed' }, { where: { id: order_id } });
     }
 
     // Log activity
@@ -120,7 +128,7 @@ const initiatePayment = async (req, res, next) => {
       await FirestoreService.logActivity(req.user.id, req.user.name, 'initiate_payment', `Pembayaran untuk pesanan #${order_id} (${method})`, { order_id, amount, method });
     } catch (_) {}
 
-    return ApiResponse.created(res, payment, 'Payment initiated successfully');
+    return ApiResponse.created(res, payment, method === 'cash' ? 'Cash payment confirmed automatically' : 'Payment initiated successfully');
   } catch (error) { next(error); }
 };
 

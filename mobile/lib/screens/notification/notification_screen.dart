@@ -5,7 +5,7 @@ import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../widgets/loading_indicator.dart';
 
-/// Halaman Notifikasi Pasien — data dari NoSQL (Firestore)
+/// Halaman Notifikasi Pasien
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
   @override
@@ -26,24 +26,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifikasi'),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.secondary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.cloud_outlined, size: 14, color: AppColors.secondary),
-                SizedBox(width: 4),
-                Text('NoSQL', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.secondary)),
-              ],
-            ),
-          ),
-        ],
       ),
       body: Consumer<NotificationProvider>(
         builder: (ctx, notifProv, _) {

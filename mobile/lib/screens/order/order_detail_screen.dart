@@ -304,14 +304,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> with WidgetsBindi
                 const Expanded(
                   child: Text('Tracking Kunjungan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text('NoSQL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.secondary)),
-                ),
               ],
             ),
             const SizedBox(height: 14),

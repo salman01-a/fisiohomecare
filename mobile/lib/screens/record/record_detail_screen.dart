@@ -102,7 +102,7 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
                       const SizedBox(height: 24),
 
                       // === SQL Data: Rekam Terapi Utama ===
-                      _sectionTitle('📋 Rekam Terapi Utama', 'Data terstruktur (SQL)'),
+                      _sectionTitle('📋 Rekam Terapi Utama', 'Data pemeriksaan dan tindakan'),
                       if (_record!.checkInAt != null) _tile('Check-in', Helpers.formatDateTime(_record!.checkInAt)),
                       if (_record!.checkOutAt != null) _tile('Check-out', Helpers.formatDateTime(_record!.checkOutAt)),
                       if (_record!.chiefComplaint != null) _tile('Keluhan Utama', _record!.chiefComplaint!),
@@ -116,7 +116,7 @@ class _RecordDetailScreenState extends State<RecordDetailScreen> {
                       // === NoSQL Data: Catatan Fleksibel, Progres, Foto ===
                       if (_record!.nosqlDetails != null) ...[
                         const SizedBox(height: 24),
-                        _sectionTitle('🔥 Data Fleksibel', 'Catatan tambahan (NoSQL/Firestore)'),
+                        _sectionTitle('📝 Data Tambahan', 'Catatan perkembangan dan dokumen pendukung'),
 
                         // Progres Pemulihan
                         if (_record!.nosqlDetails!.progressRating != null)
