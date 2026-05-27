@@ -1,14 +1,14 @@
-const BASE_URL = 'http://localhost:3000/v1';
+const BASE_URL = 'http://localhost:3001/v1';
 
 export function getImageUrl(url) {
   if (!url) return url;
   if (url.startsWith('/uploads')) {
-    return `http://localhost:3000${url}`;
+    return `http://localhost:3001${url}`;
   }
   // GCS URLs: proxy through backend to handle auth
   if (url.startsWith('https://storage.googleapis.com/') || url.startsWith('https://firebasestorage.googleapis.com/')) {
     const token = localStorage.getItem('token');
-    return `http://localhost:3000/v1/upload/image?url=${encodeURIComponent(url)}&token=${token}`;
+    return `http://localhost:3001/v1/upload/image?url=${encodeURIComponent(url)}&token=${token}`;
   }
   return url;
 }

@@ -30,6 +30,7 @@ export default function TherapistDashboard() {
   const [recordPhotos, setRecordPhotos] = useState([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
   const [fullRecord, setFullRecord] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
 
   // Notifications State
   const [notifications, setNotifications] = useState([]);
@@ -531,7 +532,11 @@ export default function TherapistDashboard() {
               accept="image/*"
               multiple
               onChange={(e) => {
-                const files = Array.from(e.target.files || []).slice(0, 5);
+                const allFiles = Array.from(e.target.files || []);
+                if (allFiles.length > 5) {
+                  toast.warning(`Anda memilih ${allFiles.length} foto. Maksimal 5 foto, sisanya tidak akan diupload.`);
+                }
+                const files = allFiles.slice(0, 5);
                 setRecordPhotos(files);
                 setPhotoPreviewUrls(files.map(f => URL.createObjectURL(f)));
               }}
@@ -590,7 +595,13 @@ export default function TherapistDashboard() {
                       <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>📸 Foto Dokumentasi Terapis ({photos.length})</span>
                       <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                         {photos.map((url, i) => (
-                          <img key={i} src={getImageUrl(url)} alt={`photo-${i}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                          <img 
+                            key={i} 
+                            src={getImageUrl(url)} 
+                            alt={`photo-${i}`} 
+                            style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer' }} 
+                            onClick={() => setPreviewImage(getImageUrl(url))}
+                          />
                         ))}
                       </div>
                     </div>
@@ -619,7 +630,13 @@ export default function TherapistDashboard() {
                     <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>📎 Lampiran ({fullRecord.nosql_details.attachments.length})</span>
                     <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                       {fullRecord.nosql_details.attachments.map((url, i) => (
-                        <img key={i} src={getImageUrl(url)} alt={`attachment-${i}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                        <img 
+                          key={i} 
+                          src={getImageUrl(url)} 
+                          alt={`attachment-${i}`} 
+                          style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0', cursor: 'pointer' }} 
+                          onClick={() => setPreviewImage(getImageUrl(url))}
+                        />
                       ))}
                     </div>
                   </div>
@@ -649,6 +666,27 @@ export default function TherapistDashboard() {
           </div>
         )}
       </Modal>
+
+      {/* Image Preview Overlay */}
+      {previewImage && (
+        <div 
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+          onClick={() => setPreviewImage(null)}
+        >
+          <img 
+            src={previewImage} 
+            style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain', borderRadius: '8px' }} 
+            onClick={(e) => e.stopPropagation()} 
+            alt="Preview"
+          />
+          <button 
+            style={{ position: 'absolute', top: '20px', right: '20px', background: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', fontSize: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+            onClick={() => setPreviewImage(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
     </div>
   );
