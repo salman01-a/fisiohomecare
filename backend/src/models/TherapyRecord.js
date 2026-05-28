@@ -10,7 +10,6 @@ module.exports = (sequelize) => {
     order_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      unique: true,
       references: {
         model: 'orders',
         key: 'id',
@@ -60,12 +59,23 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
+    photo_urls: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      get() {
+        const raw = this.getDataValue('photo_urls');
+        return raw ? JSON.parse(raw) : [];
+      },
+      set(val) {
+        this.setDataValue('photo_urls', val ? JSON.stringify(val) : null);
+      },
+    },
   }, {
     tableName: 'therapy_records',
     timestamps: true,
     underscored: true,
     indexes: [
-      { unique: true, fields: ['order_id'] },
+      { unique: true, fields: ['order_id', 'session_number'] },
       { fields: ['therapist_id'] },
       { fields: ['patient_id'] },
     ],

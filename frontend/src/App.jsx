@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import RegisterTherapist from './pages/RegisterTherapist';
@@ -26,32 +27,34 @@ function RedirectByRole() {
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register-therapist" element={<RegisterTherapist />} />
-          <Route
-            path="/admin/*"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/therapist/*"
-            element={
-              <ProtectedRoute allowedRoles={['therapist']}>
-                <TherapistDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/" element={<RedirectByRole />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register-therapist" element={<RegisterTherapist />} />
+            <Route
+              path="/admin/*"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/therapist/*"
+              element={
+                <ProtectedRoute allowedRoles={['therapist']}>
+                  <TherapistDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/" element={<RedirectByRole />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

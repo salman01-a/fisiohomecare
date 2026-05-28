@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { authenticate, authorize, requireValidatedTherapist } = require('../middleware/auth');
 const { upload, setUploadType } = require('../middleware/upload');
-const { uploadFile, uploadMultipleFiles } = require('../controllers/uploadController');
+const { uploadFile, uploadMultipleFiles, streamImage } = require('../controllers/uploadController');
 
 router.use(authenticate);
 
@@ -19,5 +19,8 @@ router.post('/document', setUploadType('documents'), upload.single('file'), uplo
 
 // Upload multiple foto (max 5) — terapis harus tervalidasi
 router.post('/photos', authorize('patient', 'therapist'), requireValidatedTherapist, setUploadType('photos'), upload.array('files', 5), uploadMultipleFiles);
+
+// Stream/proxy image from GCS or local storage
+router.get('/image', streamImage);
 
 module.exports = router;

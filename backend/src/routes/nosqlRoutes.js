@@ -8,8 +8,14 @@ router.use(authenticate);
 router.post('/tracking/:order_id', authorize('therapist', 'admin'), nosqlController.updateVisitTracking);
 router.get('/tracking/:order_id', nosqlController.getVisitTracking);
 
-// Notifications (Pasien)
-router.get('/notifications', authorize('patient'), nosqlController.getMyNotifications);
-router.put('/notifications/:notif_id/read', authorize('patient'), nosqlController.markNotificationRead);
+// Notifications (Semua role bisa akses notifikasinya masing-masing)
+router.get('/notifications', nosqlController.getMyNotifications);
+router.put('/notifications/:notif_id/read', nosqlController.markNotificationRead);
+
+// Activity Logs (user's own)
+router.get('/my-activity-logs', nosqlController.getMyActivityLogs);
+
+// Activity Logs (Admin only)
+router.get('/activity-logs', authorize('admin'), nosqlController.getActivityLogs);
 
 module.exports = router;

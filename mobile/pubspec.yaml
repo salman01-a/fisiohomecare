@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.11.0
+  sdk: ^3.9.0
 
 dependencies:
   flutter:
@@ -30,6 +30,9 @@ dependencies:
 
   # Google Fonts
   google_fonts: ^6.1.0
+
+  # Local notifications (Android & iOS)
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:

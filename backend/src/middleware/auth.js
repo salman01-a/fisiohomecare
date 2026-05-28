@@ -10,11 +10,16 @@ const jwt = require('jsonwebtoken');
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    let token;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.query.token) {
+      // Support token via query string (for <img> tags that can't set headers)
+      token = req.query.token;
+    } else {
       throw ApiError.unauthorized('No token provided. Use Bearer <token>');
     }
-
-    const token = authHeader.split(' ')[1];
     let firebaseUid = null;
     let decodedToken = null;
 

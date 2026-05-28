@@ -3,7 +3,7 @@ const { body } = require('express-validator');
 const validate = require('../middleware/validate');
 const { authenticate, authorize, requireValidatedTherapist } = require('../middleware/auth');
 const {
-  getAllOrders, createOrder, getOrderById, updateOrderStatus, cancelOrder,
+  getAllOrders, createOrder, getOrderById, updateOrderStatus, cancelOrder, rateOrder,
 } = require('../controllers/orderController');
 
 router.use(authenticate);
@@ -25,5 +25,9 @@ router.put('/:id/status', authorize('admin', 'therapist'), requireValidatedThera
 ], validate, updateOrderStatus);
 
 router.delete('/:id', cancelOrder);
+
+router.post('/:id/rate', authorize('patient'), [
+  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
+], validate, rateOrder);
 
 module.exports = router;

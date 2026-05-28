@@ -1,4 +1,17 @@
-const BASE_URL = 'http://localhost:3000/v1';
+const BASE_URL = 'http://localhost:3001/v1';
+
+export function getImageUrl(url) {
+  if (!url) return url;
+  if (url.startsWith('/uploads')) {
+    return `http://localhost:3001${url}`;
+  }
+  // GCS URLs: proxy through backend to handle auth
+  if (url.startsWith('https://storage.googleapis.com/') || url.startsWith('https://firebasestorage.googleapis.com/')) {
+    const token = localStorage.getItem('token');
+    return `http://localhost:3001/v1/upload/image?url=${encodeURIComponent(url)}&token=${token}`;
+  }
+  return url;
+}
 
 function getToken() {
   return localStorage.getItem('token');
@@ -79,6 +92,7 @@ export const therapistAPI = {
     request(`/therapists/${id}/schedules/${scheduleId}`, {
       method: 'DELETE',
     }),
+  getReviews: (id) => request(`/therapists/${id}/reviews`),
 };
 
 // Services
@@ -141,6 +155,19 @@ export const paymentAPI = {
       body: JSON.stringify({ status }),
     }),
   getByOrderId: (orderId) => request(`/payments/${orderId}`),
+  getProofBlobUrl: async (orderId) => {
+    const token = getToken();
+    const response = await fetch(`${BASE_URL}/payments/${orderId}/proof`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    if (!response.ok) {
+      throw new Error('Gagal memuat bukti pembayaran');
+    }
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+  },
 };
 
 // Therapy Records
@@ -182,3 +209,32 @@ export const uploadAPI = {
     });
   },
 };
+
+// NoSQL (Firestore)
+export const nosqlAPI = {
+  // Visit Tracking
+  getTracking: (orderId) => request(`/nosql/tracking/${orderId}`),
+  updateTracking: (orderId, status, notes = '') =>
+    request(`/nosql/tracking/${orderId}`, {
+      method: 'POST',
+      body: JSON.stringify({ status, notes }),
+    }),
+
+  // Patient Notifications
+  getNotifications: () => request('/nosql/notifications'),
+  markAsRead: (notifId) =>
+    request(`/nosql/notifications/${notifId}/read`, { method: 'PUT' }),
+
+  // Activity Logs
+  getActivityLogs: (limit = 50) => request(`/nosql/activity-logs?limit=${limit}`),
+  getMyActivityLogs: (limit = 50) => request(`/nosql/my-activity-logs?limit=${limit}`),
+};
+
+// Patients
+export const patientAPI = {
+  getAll: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/patients${query ? `?${query}` : ''}`);
+  },
+};
+

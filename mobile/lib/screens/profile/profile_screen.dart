@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../utils/constants.dart';
 import '../../utils/routes.dart';
 import '../../widgets/custom_button.dart';
@@ -40,9 +41,7 @@ class ProfileScreen extends StatelessWidget {
 
             // Menu items
             _menuItem(context, Icons.receipt_long_outlined, 'Pesanan Saya', () => Navigator.pushNamed(context, AppRoutes.orderList)),
-            _menuItem(context, Icons.medical_information_outlined, 'Rekam Terapi', () {
-              Navigator.pushNamed(context, AppRoutes.recordList);
-            }),
+            _menuItem(context, Icons.medical_information_outlined, 'Rekam Medis Saya', () => Navigator.pushNamed(context, AppRoutes.recordList)),
             _menuItem(context, Icons.info_outline, 'Tentang Aplikasi', () {
               showAboutDialog(
                 context: context,
@@ -71,6 +70,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 );
                 if (confirm == true && context.mounted) {
+                  Provider.of<NotificationProvider>(context, listen: false).stopPolling();
                   await auth.logout();
                   if (context.mounted) Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
                 }

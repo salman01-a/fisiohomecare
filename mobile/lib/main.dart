@@ -5,6 +5,7 @@ import 'providers/auth_provider.dart';
 import 'providers/therapist_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/service_provider.dart';
+import 'providers/notification_provider.dart';
 import 'utils/constants.dart';
 import 'utils/routes.dart';
 
@@ -21,6 +22,7 @@ import 'screens/payment/payment_screen.dart';
 import 'screens/record/record_list_screen.dart';
 import 'screens/record/record_detail_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/notification/notification_screen.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -41,6 +43,7 @@ class FisioHomecareApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TherapistProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         title: 'FisioHomecare',
@@ -61,6 +64,7 @@ class FisioHomecareApp extends StatelessWidget {
           AppRoutes.recordList: (_) => const RecordListScreen(),
           AppRoutes.recordDetail: (_) => const RecordDetailScreen(),
           AppRoutes.profile: (_) => const ProfileScreen(),
+          AppRoutes.notifications: (_) => const NotificationScreen(),
         },
       ),
     );

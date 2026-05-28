@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../models/user.dart';
+import '../utils/error_helper.dart';
 import '../services/auth_service.dart';
 import '../services/api_client.dart';
 
@@ -121,18 +122,6 @@ class AuthProvider extends ChangeNotifier {
   }
 
   String _extractErrorMessage(dynamic e) {
-    if (e is DioException) {
-      if (e.response != null && e.response?.data != null) {
-        if (e.response?.data is Map && e.response?.data['message'] != null) {
-          return e.response?.data['message'].toString() ?? 'Terjadi kesalahan koneksi';
-        }
-        return e.response?.data.toString() ?? 'Terjadi kesalahan koneksi';
-      }
-      return e.message ?? 'Terjadi kesalahan koneksi';
-    }
-    if (e is Exception) {
-      return e.toString().replaceFirst('Exception: ', '');
-    }
-    return e?.toString() ?? 'Terjadi kesalahan';
+    return ErrorHelper.extractMessage(e);
   }
 }

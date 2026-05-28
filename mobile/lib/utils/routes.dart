@@ -12,4 +12,5 @@ class AppRoutes {
   static const String recordList = '/records';
   static const String recordDetail = '/record-detail';
   static const String profile = '/profile';
+  static const String notifications = '/notifications';
 }

@@ -1,7 +1,8 @@
-const { Order, Patient, Therapist, Schedule, User, Payment, sequelize } = require('../models');
+const { Order, Patient, Therapist, Schedule, User, Payment, TherapyRecord, Service, sequelize } = require('../models');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 const { Op } = require('sequelize');
+const FirestoreService = require('../services/firestoreService');
 
 /**
  * List all orders (with filters)
@@ -51,6 +52,7 @@ const getAllOrders = async (req, res, next) => {
         { association: 'schedule' },
         { association: 'payment' },
         { association: 'service' },
+        { association: 'therapyRecord' },
       ],
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -142,6 +144,26 @@ const createOrder = async (req, res, next) => {
       ],
     });
 
+    // Send notification to therapist
+    try {
+      const therapistData = await Therapist.findByPk(therapist_id);
+      if (therapistData) {
+        await FirestoreService.sendUserNotification(
+          therapistData.user_id,
+          '🆕 Pesanan Baru',
+          `Ada pesanan baru pada tanggal ${schedule.date}. Silakan cek jadwal Anda.`,
+          'info'
+        );
+      }
+    } catch (notifErr) {
+      console.warn('[Firestore] Failed to send new order notification:', notifErr.message);
+    }
+
+    // Log activity
+    try {
+      await FirestoreService.logActivity(req.user.id, req.user.name, 'create_order', `Pesanan baru #${order.id} dibuat`, { order_id: order.id, therapist_id, service_type });
+    } catch (_) {}
+
     return ApiResponse.created(res, fullOrder, 'Order created successfully');
   } catch (error) {
     await t.rollback();
@@ -209,7 +231,9 @@ const updateOrderStatus = async (req, res, next) => {
       throw ApiError.badRequest(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
     }
 
-    const order = await Order.findByPk(req.params.id);
+    const order = await Order.findByPk(req.params.id, {
+      include: [{ association: 'patient' }],
+    });
     if (!order) {
       throw ApiError.notFound('Order not found');
     }
@@ -232,19 +256,79 @@ const updateOrderStatus = async (req, res, next) => {
 
     await order.update({ status });
 
-    // If cancelled, free up the schedule slot
+    // If cancelled, free up the schedule slot and reject associated payments
     if (status === 'cancelled') {
       await Schedule.update(
         { is_booked: false },
         { where: { id: order.schedule_id } }
       );
+      await Payment.update(
+        { status: 'rejected' },
+        { where: { order_id: order.id, status: ['pending', 'confirmed'] } }
+      );
     }
+
+    // === NoSQL: Auto-sync visit tracking & notification to Firestore ===
+    try {
+      const FirestoreService = require('../services/firestoreService');
+
+      // Map order status to tracking status
+      const trackingStatusMap = {
+        confirmed: { status: 'confirmed', notes: 'Pesanan dikonfirmasi oleh admin.' },
+        otw:       { status: 'otw',       notes: 'Terapis sedang dalam perjalanan menuju lokasi Anda.' },
+        ongoing:   { status: 'ongoing',   notes: 'Sesi terapi sedang berlangsung.' },
+        done:      { status: 'done',      notes: 'Sesi terapi telah selesai.' },
+        cancelled: { status: 'cancelled', notes: 'Pesanan dibatalkan.' },
+      };
+
+      const notificationMap = {
+        confirmed: { title: '✅ Pesanan Dikonfirmasi',    message: 'Pesanan Anda telah dikonfirmasi. Terapis akan segera menghubungi Anda.' },
+        otw:       { title: '🚗 Terapis Dalam Perjalanan', message: 'Terapis sedang dalam perjalanan menuju lokasi Anda. Harap bersiap.' },
+        ongoing:   { title: '▶️ Sesi Terapi Dimulai',     message: 'Sesi fisioterapi Anda sedang berlangsung.' },
+        done:      { title: '🎉 Sesi Terapi Selesai',     message: 'Sesi fisioterapi Anda telah selesai. Jangan lupa beri rating!' },
+        cancelled: { title: '❌ Pesanan Dibatalkan',       message: 'Pesanan Anda telah dibatalkan.' },
+      };
+
+      if (trackingStatusMap[status]) {
+        const { status: tStatus, notes: tNotes } = trackingStatusMap[status];
+        await FirestoreService.logVisitTracking(order.id, tStatus, {}, tNotes);
+      }
+
+      if (notificationMap[status] && order.patient_id) {
+        const { title, message } = notificationMap[status];
+        const type = status === 'cancelled' ? 'error' : status === 'done' ? 'success' : 'info';
+        await FirestoreService.sendPatientNotification(order.patient_id, title, message, type);
+      }
+
+      // Notify therapist (user-based notifications)
+      const therapistNotifMap = {
+        confirmed: { title: '✅ Pesanan Dikonfirmasi', message: 'Pesanan telah dikonfirmasi oleh admin. Harap siapkan jadwal kunjungan.' },
+        cancelled: { title: '❌ Pesanan Dibatalkan', message: 'Pesanan telah dibatalkan.' },
+      };
+      if (therapistNotifMap[status]) {
+        const therapistData = await Therapist.findByPk(order.therapist_id);
+        if (therapistData) {
+          const { title, message } = therapistNotifMap[status];
+          await FirestoreService.sendUserNotification(therapistData.user_id, title, message, status === 'cancelled' ? 'error' : 'info');
+        }
+      }
+    } catch (firestoreErr) {
+      // Firestore errors should not block the main response
+      console.warn('[Firestore] Failed to sync tracking/notification:', firestoreErr.message);
+    }
+    // =================================================================
+
+    // Log activity
+    try {
+      await FirestoreService.logActivity(req.user.id, req.user.name, 'update_order_status', `Status pesanan #${order.id} diubah ke '${status}'`, { order_id: order.id, status });
+    } catch (_) {}
 
     return ApiResponse.success(res, order, `Order status updated to '${status}'`);
   } catch (error) {
     next(error);
   }
 };
+
 
 /**
  * Cancel order
@@ -270,11 +354,92 @@ const cancelOrder = async (req, res, next) => {
 
     await order.update({ status: 'cancelled' }, { transaction: t });
 
+    // Cancel associated payment if exists
+    await Payment.update(
+      { status: 'rejected' },
+      { where: { order_id: order.id, status: ['pending', 'confirmed'] }, transaction: t }
+    );
+
     await t.commit();
+
+    // Log activity
+    try {
+      await FirestoreService.logActivity(req.user.id, req.user.name, 'cancel_order', `Pesanan #${order.id} dibatalkan`, { order_id: order.id });
+    } catch (_) {}
 
     return ApiResponse.success(res, order, 'Order cancelled successfully');
   } catch (error) {
     await t.rollback();
+    next(error);
+  }
+};
+
+/**
+ * Rate an order (Patient only, after done)
+ * POST /orders/:id/rate
+ */
+const rateOrder = async (req, res, next) => {
+  try {
+    const { rating, comment } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      throw ApiError.badRequest('Rating must be between 1 and 5');
+    }
+
+    const order = await Order.findByPk(req.params.id);
+    if (!order) {
+      throw ApiError.notFound('Order not found');
+    }
+
+    // Must be patient's own order
+    const patient = await Patient.findOne({ where: { user_id: req.user.id } });
+    if (!patient || order.patient_id !== patient.id) {
+      throw ApiError.forbidden('You can only rate your own orders');
+    }
+
+    if (order.status !== 'done') {
+      throw ApiError.badRequest('Can only rate completed orders');
+    }
+
+    if (order.rating !== null) {
+      throw ApiError.badRequest('Order has already been rated');
+    }
+
+    // Save rating to order
+    await order.update({
+      rating: parseInt(rating),
+      rating_comment: comment || null,
+    });
+
+    // Recalculate therapist average rating
+    const avgResult = await Order.findOne({
+      where: {
+        therapist_id: order.therapist_id,
+        rating: { [Op.not]: null },
+      },
+      attributes: [
+        [sequelize.fn('AVG', sequelize.col('rating')), 'avg_rating'],
+      ],
+      raw: true,
+    });
+
+    const avgRating = parseFloat(avgResult.avg_rating) || 0;
+    await Therapist.update(
+      { rating: Math.round(avgRating * 100) / 100 },
+      { where: { id: order.therapist_id } }
+    );
+
+    // Log activity
+    try {
+      await FirestoreService.logActivity(req.user.id, req.user.name, 'rate_order', `Rating ${rating}⭐ untuk pesanan #${order.id}`, { order_id: order.id, rating });
+    } catch (_) {}
+
+    return ApiResponse.success(res, {
+      rating: order.rating,
+      rating_comment: order.rating_comment,
+      therapist_avg_rating: avgRating,
+    }, 'Rating submitted successfully');
+  } catch (error) {
     next(error);
   }
 };
@@ -285,4 +450,5 @@ module.exports = {
   getOrderById,
   updateOrderStatus,
   cancelOrder,
+  rateOrder,
 };

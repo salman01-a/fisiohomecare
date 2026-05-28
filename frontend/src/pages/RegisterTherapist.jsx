@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import './Login.css'; // Reusing login styles for consistency
 
 export default function RegisterTherapist() {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -35,10 +37,12 @@ export default function RegisterTherapist() {
       
       // Store token and redirect
       localStorage.setItem('token', res.data.token);
-      alert('Pendaftaran berhasil! Akun Anda sedang menunggu validasi admin.');
+      toast.success('Pendaftaran berhasil! Akun Anda sedang menunggu validasi admin.');
       
-      // We force page reload to auth context kicks in and redirects
-      window.location.href = '/therapist';
+      // We force page reload to auth context kicks in and redirects after a short delay
+      setTimeout(() => {
+        window.location.href = '/therapist';
+      }, 1500);
     } catch (err) {
       setError(err.message || 'Pendaftaran gagal. Silakan coba lagi.');
     } finally {
