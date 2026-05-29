@@ -1,5 +1,6 @@
 runtime: nodejs20
-service: fe-faris-123230024
+service: project-frontend
+
 
 handlers:
   - url: /
