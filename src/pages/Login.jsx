@@ -43,7 +43,7 @@ export default function Login() {
               <div className="login-logo-icon">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="rgba(255,255,255,0.2)" />
-                  <path d="M12 6c-1.1 0-2 .9-2 2v2H8c-1.1 0-2 .9-2 2s.9 2 2 2h2v2c0 1.1.9 2 2 2s2-.9 2-2v-2h2c1.1 0 2-.9 2-2s-.9-2-2-2h-2V8c0-1.1-.9-2-2-2z" fill="white" />
+                  <path d="M12 6c-1.1 0-2 .9-2 2v2H8c-1.1 0-2 .9-2 2s.9 2 2 2h2v2c0 1.1.9 2 2 2s2-.9 2-2v-2h2c1.1 0 2-.9 2-2s-.9-2-2-2h-2V8c0-1.1-.9-2-2-2z" fill="#3b82f6" />
                 </svg>
               </div>
               <h1 className="login-logo-text">FisioHomecare</h1>
@@ -199,14 +199,6 @@ export default function Login() {
                 >
                   <span className="demo-role therapist">Terapis</span>
                   <span className="demo-email">budi@fisiohomecare.com</span>
-                </button>
-                <button
-                  type="button"
-                  className="demo-account-btn"
-                  onClick={() => { setEmail('andi@gmail.com'); setPassword('patient123'); }}
-                >
-                  <span className="demo-role patient">Pasien</span>
-                  <span className="demo-email">andi@gmail.com</span>
                 </button>
               </div>
             </div>
