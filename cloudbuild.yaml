@@ -1,0 +1,57 @@
+steps:
+  # Step 1: Build Docker image menggunakan Dockerfile yang ada di root directory
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Image'
+    args:
+      - 'build'
+      - '-t'
+      - '$_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO/$_SERVICE_NAME:$COMMIT_SHA'
+      - '-t'
+      - '$_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO/$_SERVICE_NAME:latest'
+      - '.'
+
+  # Step 2: Push Docker image dengan tag commit SHA ke Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Image (Commit SHA)'
+    args:
+      - 'push'
+      - '$_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO/$_SERVICE_NAME:$COMMIT_SHA'
+
+  # Step 3: Push Docker image dengan tag 'latest' ke Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Image (Latest)'
+    args:
+      - 'push'
+      - '$_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO/$_SERVICE_NAME:latest'
+
+  # Step 4: Deploy image ke Google Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy to Cloud Run'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '$_SERVICE_NAME'
+      - '--image'
+      - '$_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO/$_SERVICE_NAME:$COMMIT_SHA'
+      - '--region'
+      - '$_DEPLOY_REGION'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+
+# Menyimpan image hasil build sebagai artifacts
+images:
+  - '$_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO/$_SERVICE_NAME:$COMMIT_SHA'
+  - '$_AR_HOSTNAME/$PROJECT_ID/$_AR_REPO/$_SERVICE_NAME:latest'
+
+# Substitutions variabel untuk kemudahan kustomisasi
+# Ganti nilai default di bawah sesuai dengan nama repo & region di GCP Anda
+substitutions:
+  _SERVICE_NAME: 'fisiohomecare-backend'
+  _DEPLOY_REGION: 'asia-southeast2' # Region Jakarta (Sangat direkomendasikan untuk low latency di Indonesia)
+  _AR_HOSTNAME: 'asia-southeast2-docker.pkg.dev' # Hostname Artifact Registry
+  _AR_REPO: 'fisiohomecare-repo' # Nama Repository di Artifact Registry Anda
+
+options:
+  logging: CLOUD_LOGGING_ONLY
