@@ -3,13 +3,16 @@ service: project-frontend
 
 
 handlers:
-  - url: /
+  - url: /assets
+    static_dir: dist/assets
+
+  - url: /(.+\..+)$
+    static_files: dist/\1
+    upload: dist/(.+\..+)$
+
+  - url: /.*
     static_files: dist/index.html
     upload: dist/index.html
-
-  - url: /(.*)
-    static_files: dist/\1
-    upload: dist/(.*)
     
 # Tambahkan ini supaya hemat (untuk testing)
 automatic_scaling:
