@@ -11,17 +11,26 @@ const initGCS = () => {
   if (bucket) return true;
   try {
     const { Storage } = require('@google-cloud/storage');
-    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT || './firebase-service-account.json';
-    const resolvedPath = path.resolve(serviceAccountPath);
+    const bucketName = process.env.GCS_BUCKET_NAME || 'homecare-2b018.appspot.com';
 
-    if (!fs.existsSync(resolvedPath)) {
-      console.warn('⚠️  GCS: Service account file not found. Upload will use local storage fallback.');
-      return false;
+    if (process.env.NODE_ENV === 'production' && !process.env.FIREBASE_SERVICE_ACCOUNT) {
+      // Production (Cloud Run): pakai Application Default Credentials
+      const storage = new Storage();
+      bucket = storage.bucket(bucketName);
+    } else {
+      // Development: pakai file service account
+      const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT || './firebase-service-account.json';
+      const resolvedPath = path.resolve(serviceAccountPath);
+
+      if (!fs.existsSync(resolvedPath)) {
+        console.warn('⚠️  GCS: Service account file not found. Upload will use local storage fallback.');
+        return false;
+      }
+
+      const storage = new Storage({ keyFilename: resolvedPath });
+      bucket = storage.bucket(bucketName);
     }
 
-    const storage = new Storage({ keyFilename: resolvedPath });
-    const bucketName = process.env.GCS_BUCKET_NAME || 'homecare-2b018.appspot.com';
-    bucket = storage.bucket(bucketName);
     gcsAvailable = true;
     console.log(`✅ GCS initialized with bucket: ${bucketName}`);
     return true;
