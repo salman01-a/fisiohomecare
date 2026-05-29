@@ -6,17 +6,17 @@ WORKDIR /usr/src/app
 
 # Step 3: Salin package.json dan package-lock.json untuk instalasi dependensi
 # Ini diletakkan sebelum menyalin kode untuk memanfaatkan cache Docker
-COPY backend/package*.json ./
+COPY package*.json ./
 
 # Step 4: Install hanya dependensi production untuk menjaga ukuran image tetap kecil
 # Dan bersihkan cache npm untuk mengurangi ukuran image lebih lanjut
 RUN npm ci --only=production && npm cache clean --force
 
-# Step 5: Salin folder source code dari project backend ke dalam container
-COPY backend/src ./src
+# Step 5: Salin folder source code ke dalam container
+COPY src ./src
 
 # Step 6: Salin file konfigurasi tambahan jika diperlukan (seperti .sequelizerc)
-COPY backend/.sequelizerc ./
+COPY .sequelizerc ./
 
 # Step 7: Tentukan environment default
 ENV NODE_ENV=production
