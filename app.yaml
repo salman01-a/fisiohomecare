@@ -1,4 +1,4 @@
-runtime: nodejs20
+runtime: nodejs22
 service: frontend-project
 
 # Konfigurasi handler untuk menyajikan aplikasi React (SPA) secara statis
