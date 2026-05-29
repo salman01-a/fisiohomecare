@@ -1,11 +1,11 @@
 steps:
   # Install dependencies
-  - name: 'node:20'
+  - name: 'node:24'
     entrypoint: 'npm'
     args: ['install']
 
   # Build aplikasi React/Vite (Membuat folder dist)
-  - name: 'node:20'
+  - name: 'node:24'
     entrypoint: 'npm'
     args: ['run', 'build']
 
