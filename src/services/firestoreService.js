@@ -15,10 +15,19 @@ class FirestoreService {
     if (!db) return null; // Fallback jika firebase tidak terkonfigurasi
 
     const docRef = db.collection('therapy_notes').doc(recordId.toString());
+    
+    // Tetap update top-level fields (agar API/frontend lama tidak error), 
+    // tapi sekaligus simpan riwayat di dalam array 'history' agar tidak ada data yang terhapus (overwrite)
     await docRef.set({
       ...data,
       updated_at: admin.firestore.FieldValue.serverTimestamp(),
       created_at: data.created_at || admin.firestore.FieldValue.serverTimestamp(),
+      history: admin.firestore.FieldValue.arrayUnion({
+        flexible_notes: data.flexible_notes || '',
+        progress_rating: data.progress_rating || 0,
+        attachments: data.attachments || [],
+        timestamp: new Date(),
+      })
     }, { merge: true });
 
     return { id: docRef.id, ...data };
