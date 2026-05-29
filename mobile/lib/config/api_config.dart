@@ -7,10 +7,10 @@ class ApiConfig {
   static String get baseUrl {
     // Both physical devices and emulators on the same network can access the host machine's IP
     // Local IP address of the host machine
-    return 'http://192.168.100.11:3001/v1';
+    return 'https://project-backend-73763759634.us-central1.run.app/v1';
   }
 
-  static const String _serverBase = 'http://192.168.100.11:3001';
+  static const String _serverBase = 'https://project-backend-73763759634.us-central1.run.app/';
 
   static String getImageUrl(String? url) {
     if (url == null || url.isEmpty) return '';
