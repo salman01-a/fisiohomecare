@@ -1,27 +1,20 @@
 steps:
-  # Step 1: Install semua dependensi menggunakan Node.js image
+  # Install dependencies
   - name: 'node:20'
-    id: 'Install Dependencies'
     entrypoint: 'npm'
-    args: ['ci']
+    args: ['install']
 
-  # Step 2: Build aplikasi React/Vite (akan menghasilkan folder 'dist')
+  # Build aplikasi React/Vite (Membuat folder dist)
   - name: 'node:20'
-    id: 'Build React App'
     entrypoint: 'npm'
     args: ['run', 'build']
 
-  # Step 3: Deploy file statis di folder 'dist' ke Google App Engine
+  # Baru kemudian lakukan Deploy
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'Deploy to App Engine'
-    entrypoint: 'gcloud'
-    args: [
-      'app', 
-      'deploy', 
-      'app.yaml', 
-      '--quiet'
-    ]
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - 'gcloud app deploy'
 
-# Opsi logging tambahan
 options:
   logging: CLOUD_LOGGING_ONLY

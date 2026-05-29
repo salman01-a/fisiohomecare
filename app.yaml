@@ -1,21 +1,17 @@
-runtime: nodejs22
-service: frontend-project
+runtime: nodejs20
+service: fe-faris-123230024
 
-# Konfigurasi handler untuk menyajikan aplikasi React (SPA) secara statis
 handlers:
-  # 1. Sajikan semua asset statis (JS, CSS, Gambar) dari folder dist/assets
-  - url: /assets
-    static_dir: dist/assets
-    secure: always
-
-  # 2. Sajikan file statis di root dist (seperti favicon.svg, manifest, dll.)
-  - url: /(.*\.(png|jpg|jpeg|gif|svg|ico|js|css|json|txt))$
-    static_files: dist/\1
-    upload: dist/(.*\.(png|jpg|jpeg|gif|svg|ico|js|css|json|txt))$
-    secure: always
-
-  # 3. Catch-all: Arahkan semua URL lainnya ke index.html (Sangat penting untuk React Router SPA)
-  - url: /.*
+  - url: /
     static_files: dist/index.html
     upload: dist/index.html
-    secure: always
+
+  - url: /(.*)
+    static_files: dist/\1
+    upload: dist/(.*)
+    
+# Tambahkan ini supaya hemat (untuk testing)
+automatic_scaling:
+  target_cpu_utilization: 0.65
+  min_instances: 0
+  max_instances: 1
